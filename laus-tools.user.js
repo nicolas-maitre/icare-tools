@@ -2,6 +2,7 @@
 // ==UserScript==
 // @name        iCare Helpers
 // @namespace   Violentmonkey Scripts
+// @noframes 
 // @match       https://icare-vali.lausanne.ch/icare/*
 // @grant       none
 // @version     1.0
@@ -23,64 +24,68 @@ const localForage = window.localforage;
 (() => {
     //BUILD UI
     const mainMenuUlElement = document.querySelector("#mainmenu > ul");
-    /** @type {HTMLDivElement} */
-    // @ts-ignore
+    /** @type {HTMLDivElement | null} */
     const overDiv = document.querySelector("#overDiv");
-    if (!(mainMenuUlElement && overDiv)) return;
+    if (mainMenuUlElement && overDiv) {
 
-    e(mainMenuUlElement).addElem("li", null,
-        createElem("a", {
-            onclick: showWindow,
-            dataset: {
-                toggle: "tooltip",
-                placement: "top",
-                originalTitle: "Les outils pratiques"
-            }
-        },
-            createElem("i", { className: "fa fa-solid fa-toolbox" })
-        )
-    );
-
-    Object.assign(overDiv.style, {
-        position: "fixed",
-        top: "0",
-        left: "0",
-        minWidth: "100vw",
-        minHeight: "100vh",
-        backgroundColor: "#000a"
-    });
-
-    const toolWindow = e(overDiv).addElem("div",
-        {
-            style: {
-                display: "inline-block",
-                position: "relative",
-                top: "50px",
-                left: "50px",
-                width: "calc(100vw - 100px)",
-                minHeight: "200px",
-                backgroundColor: "white",
-                border: "1px solid gray",
-                boxShadow: "5px 5px 10px #000a",
-                padding: "0 10px",
-            }
-        },
-        createElem("div",
-            {
-                style: {
-                    display: "flex",
-                    flexFlow: "row nowrap",
-                    justifyContent: "space-between",
-                    borderBottom: "1px solid lightgray",
-                    fontSize: "1.5em",
+        e(mainMenuUlElement).addElem("li", null,
+            createElem("a", {
+                onclick: showWindow,
+                dataset: {
+                    toggle: "tooltip",
+                    placement: "top",
+                    originalTitle: "Les outils pratiques"
                 }
             },
-            createElem("h2", null, "Outils"),
-            createElem("button", { onclick: hideWindow }, "X")
-        ),
-        WindowFillContractsClassesSection(),
-        // WindowTestSection(),
-    );
+                createElem("i", { className: "fa fa-solid fa-toolbox" })
+            )
+        );
+
+        Object.assign(overDiv.style, {
+            position: "fixed",
+            top: "0",
+            left: "0",
+            minWidth: "100vw",
+            minHeight: "100vh",
+            backgroundColor: "#000a"
+        });
+    }
+
+    const toolWindow = overDiv?.appendChild(ToolWindow());
+
+    function ToolWindow() {
+        return createElem("div",
+            {
+                style: {
+                    display: "inline-block",
+                    position: "relative",
+                    top: "50px",
+                    left: "50px",
+                    width: "calc(100vw - 100px)",
+                    minHeight: "200px",
+                    backgroundColor: "white",
+                    border: "1px solid gray",
+                    boxShadow: "5px 5px 10px #000a",
+                    padding: "0 10px",
+                }
+            },
+            createElem("div",
+                {
+                    style: {
+                        display: "flex",
+                        flexFlow: "row nowrap",
+                        justifyContent: "space-between",
+                        borderBottom: "1px solid lightgray",
+                        fontSize: "1.5em",
+                    }
+                },
+                createElem("h2", null, "Outils"),
+                createElem("button", { onclick: hideWindow }, "X")
+            ),
+            WindowFillContractsClassesSection(),
+            // WindowTestSection(),
+        );
+    }
 
     function WindowFillContractsClassesSection() {
         /** @type {BindRef<HTMLInputElement>} */
@@ -122,10 +127,12 @@ const localForage = window.localforage;
 
                         const allPeopleWorkbook = XLSX.read(allPeopleBuffer);
                         const allPeopleSheet = allPeopleWorkbook.Sheets[allPeopleWorkbook.SheetNames[0]];
+                        /** @type {FillContractsClassePerson[]} */
                         const allPeopleJSON = XLSX.utils.sheet_to_json(allPeopleSheet);
-                        if (!Array.isArray(allPeopleJSON)) {
+                        if (!Array.isArray(allPeopleJSON) || !objectContainsKeys(allPeopleJSON[0], ["Nom", "Prenom", "DateNaissance"])) {
                             submitButtonRef.current.disabled = false;
                             alert("Le fichier d'élèves est vide ou corrompu. Veuillez réessayer.");
+                            console.error(allPeopleJSON[0]);
                             return;
                         }
                         console.log({ allStudentsJSON: allPeopleJSON });
@@ -134,7 +141,7 @@ const localForage = window.localforage;
                         const wrongContractsSheet = wrongContractsWorkbook.Sheets[wrongContractsWorkbook.SheetNames[0]]
                         /** @type {FillContractsClasseContract[]} */
                         const wrongContractsJSON = XLSX.utils.sheet_to_json(wrongContractsSheet);
-                        if (!Array.isArray(wrongContractsJSON)) {
+                        if (!Array.isArray(wrongContractsJSON) || !objectContainsKeys(wrongContractsJSON[0], ["e id", "e nom", "e prenom", "institution", "institution id"])) {
                             submitButtonRef.current.disabled = false;
                             alert("Le fichier de contrats est vide ou corrompu. Veuillez réessayer.");
                             return;
@@ -204,16 +211,40 @@ const localForage = window.localforage;
             right: "0",
             visibility: "hidden",
             backgroundColor: "pink",
-            minHeight: "150px",
             minWidth: "200px",
             cursor: "pointer",
             padding: "10px",
             zIndex: "999",
+            overflow: "hidden",
         }
     },
+        createElem("button", {
+            style: { float: "right", fontWeight: "bold" },
+            onclick(e) {
+                e.stopPropagation();
+                taskWindow.style.height = taskWindow.style.height ? "" : "5em";
+            }
+        }, "__"),
         createElem("h4", null, "TÂCHE EN COURS,", createElem("br"), "CLIQUEZ ICI POUR ANNULER"),
         createElem("p", { bindTo: taskWindowInfos, style: { whiteSpace: "pre" } }),
-        createElem("button", { bindTo: taskWindowResumeButton, style: { display: "none" } }, "Continuer la tâche")
+        createElem("button", {
+            bindTo: taskWindowResumeButton,
+            style: { display: "none" },
+            async onclick(e) {
+                e.stopPropagation();
+                const task = await getCurrentTask();
+                if (!task) return;
+
+                await setCurrentTask({
+                    ...task,
+                    isPaused: false
+                });
+
+                handleTasks();
+            }
+        },
+            "Continuer la tâche"
+        ),
     );
 
     /**
@@ -241,14 +272,16 @@ const localForage = window.localforage;
                 "Étape: " + task.stepName + "\n" +
                 "Étape démarrée le: " + new Date(task.stepStartedAt).toLocaleString() + "\n" +
                 (task.isPaused ? "\nEN PAUSE" : "") +
-                (task.lastMessage ? "\nMessage: " + task.lastMessage : "")
+                (task.lastMessage ? "\nDernier message: " + task.lastMessage : "")
     }
 
     function hideWindow() {
+        if (!overDiv || !toolWindow) return;
         overDiv.style.visibility = "hidden";
         toolWindow.style.visibility = "hidden";
     }
     function showWindow() {
+        if (!overDiv || !toolWindow) return;
         overDiv.style.visibility = "visible";
         toolWindow.style.visibility = "visible";
     }
@@ -336,17 +369,19 @@ const localForage = window.localforage;
      *  }} FillContractsClasseContract
      * 
      * @typedef {{
+     *      "Nom":string, 
+     *      "Prenom":string, 
+     *      "DateNaissance":string, 
+     *      "ClasseCourante":string, 
+     *      "BatimentNomOfficiel":string 
+     *  }} FillContractsClassePerson
+     * 
+     * @typedef {{
      *      contracts: {
      *          [id: string]: FillContractsClasseContract
      *      }; 
      *      contractsIds: string[];
-     *      allPeople: {
-     *          "Nom":string, 
-     *          "Prenom":string, 
-     *          "DateNaissance":string, 
-     *          "ClasseCourante":string, 
-     *          "BatimentNomOfficiel":string 
-     *      }[];
+     *      allPeople: FillContractsClassePerson[];
      * }} FillContractClassesSharedData
      * 
      * @typedef {Omit<Task, "sharedData"> & {
@@ -431,6 +466,7 @@ const localForage = window.localforage;
 
                     foundPerson = foundPeople[ind - 1];
                 }
+
                 /** @type {FillContractClasseTask} */
                 const newTask = {
                     ...task,
@@ -501,15 +537,129 @@ const localForage = window.localforage;
                 if (!contractLink) throw new Error("contract link not found");
                 contractLink.click();
 
+                nextTaskStep("openContractEditPage", task);
+
+                return;
+
+            case 'openContractEditPage':
+                if (!urlCheck("/icare/Be/VertragEdit.do?method=main&aktuelle=true&theVerId="))
+                    return;
+
+                //check if id is still the same
+                const nameAndIdH2 = document.querySelector("#data h2");
+                if (!nameAndIdH2?.textContent?.includes(personId))
+                    throw new Error("L'id du contrat ne correspond pas.");
+
+                /** @type {HTMLIFrameElement | null} */
+                const iframe = document.querySelector("iframe[name=klassifizierungframe]");
+                if (!iframe) throw new Error("iframe de contrat introuvable");
+                console.log(iframe.src);
+                window.location.href = iframe.src;
+
                 nextTaskStep("fillContractCollege", task);
 
                 return;
 
             case "fillContractCollege":
-                if (!urlCheck("/icare/Be/VertragEdit.do?method=main&aktuelle=true&theVerId="))
+                if (!urlCheck("/icare/PrepareKlassifizierung.do?table=TVertrag&showTables=&col=ver_id&showCols=&addTables=&addCols=&value="))
                     return;
+
+                await fillContractData(task, "Collège", person.schoolName, "fillContractClass");
+
+                nextTaskStep("fillContractClass", task, false);
+
+                return;
+
+            case "fillContractClass":
+                if (!urlCheck("/icare/PrepareKlassifizierung.do?table=TVertrag&showTables=&col=ver_id&showCols=&addTables=&addCols=&value="))
+                    return;
+
+                await fillContractData(task, "Classe et enseignant", person.schoolClass, "fillContractClass");
+
+                nextTaskStep("fillContractClass", task, false);
+
                 return;
         }
+    }
+
+    /**
+     * @param {FillContractClasseTask} task
+     * @param {string} name
+     * @param {string | undefined} value
+     * @param {string} nextStep
+     */
+    async function fillContractData(task, name, value, nextStep) {
+        const person = task.sharedData.contracts[task.sharedData.contractsIds[0]];
+        /** @type {NodeListOf<HTMLTableElement>} */
+        const tables = document.querySelectorAll("#theKlForm > table.sortable");
+
+        /** @type {HTMLSelectElement | undefined} */
+        let select;
+        /** @type {HTMLButtonElement | undefined} */
+        let saveButton;
+
+        for (const table of tables) {
+            /** @type {HTMLTableRowElement | null} */
+            const nameTR = table.querySelector("tr:not(.even)");
+            const nameFromTR = nameTR?.textContent?.trim();
+            if (!nameFromTR?.includes(name))
+                continue;
+
+            //TODO: Selector doesn't work
+            const dataTR = table.querySelector("tbody tr.even, tbody tr[fieldtyp=kl]");
+            select = dataTR?.querySelector("td > span > select.inputNoWidth") ?? undefined;
+            saveButton = dataTR?.querySelector("td > button.link") ?? undefined;
+            if (!saveButton?.getAttribute("onclick")?.includes("javascript:saveEntry('KlassifizierungForm'"))
+                throw new Error("Imposteur de bouton de sauvegarde");
+
+            break;
+        }
+
+        console.log({ name, select, saveButton });
+        // throw "non";
+
+        if (!select || !saveButton) {
+            alert(`L'entrée ${name} est introuvable. Vérifiez et créez la si besoin.\nEnsuite relancez la tâche`)
+            throw new Warning(`Ligne ${name} introuvable.`);
+        }
+
+        if (select.value !== '0' && !confirm(`${name} déjé renseigné.\n Souhaitez vous l'écraser?`)) {
+            alert(`Vérifiez/renseignez le collège, enregistrez puis continuez la tâche.`);
+            nextTaskStep(nextStep, task, false);
+            throw new Warning(`Vérifier/Renseigner manuellement ${name}`);
+        }
+
+        //find matching name
+        const optionsToSelect = value
+            ? [...select.options].filter(op =>
+                op.textContent?.trim()
+                    .includes(value.trim()))
+            : [];
+
+        let resIndexChosen = 1;
+        if (optionsToSelect.length > 1) {
+            do {
+                const txtRes = prompt(
+                    `Veuillez choisir la bonne valeur pour '${name}.\n'` +
+                    `Personne: ${person["e prenom"]} ${person["e nom"]} [${person["e id"]}]\n` +
+                    optionsToSelect.map((o, i) => `[${i + 1}] ${o.textContent?.trim()}`).join("\n"),
+                    "1"
+                )
+                resIndexChosen = parseInt(txtRes ?? "");
+            } while (isNaN(resIndexChosen) || resIndexChosen < 1 || resIndexChosen > optionsToSelect.length);
+        }
+
+        const optionToSelect = optionsToSelect[resIndexChosen - 1];
+
+        if (!optionToSelect?.value) {
+            alert(`${name} introuvable dans les listes. Renseignez le manuellement puis enregistrez. Ensuite continuez la tâche.`);
+            nextTaskStep(nextStep, task, false);
+            throw new Warning(`${name} introuvable. Renseigner manuellement.`);
+        }
+
+        select.value = optionToSelect.value;
+
+        saveButton.click();
     }
 
     //exec on page load
@@ -566,7 +716,7 @@ const localForage = window.localforage;
      * @param {string} stepName
      * @param {Task} task
      */
-    async function nextTaskStep(stepName, task) {
+    async function nextTaskStep(stepName, task, autoStart = true) {
         // if (!task) {
         //     task = await getCurrentTask() ?? undefined;
         //     if (!task)
@@ -574,12 +724,81 @@ const localForage = window.localforage;
         // }
         task = { ...task, stepName, stepStartedAt: Date.now() };
         await setCurrentTask(task);
-        handleTasks();
+        if (autoStart)
+            handleTasks();
     }
 
     //
     //LIB
     //
+
+    /**
+     * @param {string | (()=>(HTMLElement|null))} selector
+     * @return {Promise<Element>}
+     */
+    function waitForSelector(selector, checkInterval = 100, maxChecks = 50) {
+        const res =
+            typeof selector === "function" ?
+                selector() :
+                document.querySelector(selector);
+
+        return new Promise((resolve, reject) => {
+            if (res === null) {
+                if (maxChecks <= 0) {
+                    reject(new Error(`can't find element ${selector.toString()}`));
+                    return;
+                }
+                setTimeout(
+                    () =>
+                        waitForSelector(selector, checkInterval, maxChecks - 1)
+                            .then(resolve)
+                            .catch(reject)
+                    , checkInterval);
+            } else {
+                resolve(res);
+            }
+        });
+    }
+    /**
+     * @param {string | (()=>(NodeListOf<Element>))} selector
+     * @param minCount minimum count of returned elements
+     * @return {Promise<NodeListOf<Element>>}
+     */
+    function waitForSelectorAll(selector, minCount = 1, checkInterval = 100, maxChecks = 50) {
+        console.log("waitForSelectorAll", maxChecks);
+        const res =
+            typeof selector === "function" ?
+                selector() :
+                document.querySelectorAll(selector);
+
+        return new Promise((resolve, reject) => {
+            if (res.length < minCount) {
+                if (maxChecks <= 0) {
+                    reject(new Error(`can't find elements ${selector.toString()}`));
+                    return;
+                }
+                setTimeout(
+                    () =>
+                        waitForSelectorAll(selector, minCount, checkInterval, maxChecks - 1)
+                            .then(resolve)
+                            .catch(reject)
+                    , checkInterval);
+            } else {
+                resolve(res);
+            }
+        });
+    }
+
+    /**
+     * @template T
+     * @param {T} obj
+     * @param {(keyof T)[]} keys
+     */
+    function objectContainsKeys(obj, keys) {
+        // @ts-ignore
+        const objKeys = Object.keys(obj);
+        return keys.every(k => objKeys.includes(k.toString()));
+    }
 
     class Warning {
         /**

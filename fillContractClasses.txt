@@ -12,7 +12,6 @@ STEP 2 -> findPerso
 3. find person in full list using name and birthday
 4. store full person info
 
-
 STEP 3 -> searchContract
 1. check or go url https://icare-vali.lausanne.ch/icare/Be/VertragList.do?reset=true
 2. enter contract num
