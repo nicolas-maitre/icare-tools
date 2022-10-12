@@ -19,7 +19,7 @@
 const XLSX = window.XLSX;
 /** @type {import("localforage")} */
 // @ts-ignore
-const localForage = window.localforage;
+const localforage = window.localforage;
 
 (() => {
   //BUILD UI
@@ -764,10 +764,11 @@ const localForage = window.localforage;
     let saveButton;
 
     for (const table of tables) {
-      /** @type {HTMLTableRowElement[]} */
-      const TRs = [
-        ...table.querySelectorAll("table > thead > tr, table > tbody > tr"),
-      ];
+      /** @type {NodeListOf<HTMLTableRowElement>} */
+      const TRList = table.querySelectorAll(
+        "table > thead > tr, table > tbody > tr"
+      );
+      const TRs = [...TRList];
 
       const nameTR = TRs.at(-2);
       const nameFromTR = nameTR?.textContent?.trim();
@@ -783,7 +784,7 @@ const localForage = window.localforage;
           ?.getAttribute("onclick")
           ?.includes("javascript:saveEntry('KlassifizierungForm'")
       )
-        throw new Error("Imposteur de bouton de sauvegarde");
+        throw new Error("Imposteur de bouton de sauvegarde (btn pas trouvé)");
 
       break;
     }
@@ -856,7 +857,7 @@ const localForage = window.localforage;
    * @param {Task} task
    */
   async function setCurrentTask(task) {
-    localForage.setItem("LTCurrentTask", task);
+    localforage.setItem("LTCurrentTask", task);
     refreshTaskWindow(task);
     return task;
   }
@@ -864,11 +865,11 @@ const localForage = window.localforage;
    * @return {Promise<Task | null>}
    */
   async function getCurrentTask() {
-    return await localForage.getItem("LTCurrentTask");
+    return await localforage.getItem("LTCurrentTask");
   }
 
   async function removeCurrentTask() {
-    await localForage.removeItem("LTCurrentTask");
+    await localforage.removeItem("LTCurrentTask");
     refreshTaskWindow(null);
   }
 
