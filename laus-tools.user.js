@@ -15,11 +15,14 @@
 //use violentmonkey for custom editor
 
 /** @type {import("xlsx")} */
-// @ts-ignore
+// @ts-ignore ts doesn't know it exists
 const XLSX = window.XLSX;
 /** @type {import("localforage")} */
-// @ts-ignore
+// @ts-ignore ts doesn't know it exists
 const localforage = window.localforage;
+/** @type {string} */
+// @ts-ignore
+const locale = window.locale;
 
 (() => {
   //BUILD UI
@@ -61,11 +64,12 @@ const localforage = window.localforage;
       "div",
       {
         style: {
+          "--width": "min(90vw, 600px)",
           display: "inline-block",
           position: "relative",
           top: "50px",
-          left: "50px",
-          width: "calc(100vw - 100px)",
+          left: "calc(50vw - calc(var(--width) / 2))",
+          width: "var(--width)",
           minHeight: "200px",
           backgroundColor: "white",
           border: "1px solid gray",
@@ -97,6 +101,8 @@ const localforage = window.localforage;
     const inputAllStudents = {};
     /** @type {BindRef<HTMLInputElement>} */
     const inputWrongContracts = {};
+    /** @type {BindRef<HTMLInputElement>} */
+    const checkboxAutoSkipDuplicates = {};
     /** @type {BindRef<HTMLButtonElement>} */
     const submitButtonRef = {};
 
@@ -114,6 +120,7 @@ const localforage = window.localforage;
               !(
                 inputAllStudents.current &&
                 inputWrongContracts.current &&
+                checkboxAutoSkipDuplicates.current &&
                 submitButtonRef.current
               )
             ) {
@@ -137,8 +144,6 @@ const localforage = window.localforage;
               allPeopleFile.arrayBuffer(),
               wrongContractsFile.arrayBuffer(),
             ]);
-
-            //TODO: check columns of the two file to make sur they are correct
 
             const allPeopleWorkbook = XLSX.read(allPeopleBuffer);
             const allPeopleSheet =
@@ -165,7 +170,7 @@ const localforage = window.localforage;
             const wrongContractsWorkbook = XLSX.read(wrongContractsBuffer);
             const wrongContractsSheet =
               wrongContractsWorkbook.Sheets[
-                wrongContractsWorkbook.SheetNames[0]
+              wrongContractsWorkbook.SheetNames[0]
               ];
             /** @type {FillContractsClasseContract[]} */
             const wrongContractsJSON =
@@ -192,13 +197,19 @@ const localforage = window.localforage;
               wrongContractsJSON.map((wc) => [wc["e id"], wc])
             );
 
-            const contractsIdsToHandle = [Object.keys(contractsById)[0]];
+            const contractsIdsToHandle =
+              Object.keys(contractsById)
+                .sort((a, b) => parseInt(a) - parseInt(b))
+            // .slice(0, 10); //debug
+
 
             /** @type {FillContractClassesSharedData} */
             const taskData = {
               contracts: contractsById,
               contractsIds: contractsIdsToHandle,
               allPeople: allPeopleJSON,
+              shouldSelectFirstDuplicate: checkboxAutoSkipDuplicates.current.checked,
+              contractsNotFound: {},
             };
 
             setNewTask(
@@ -243,6 +254,13 @@ const localforage = window.localforage;
           bindTo: inputWrongContracts,
           id: "inputWrongContracts",
         }),
+        createElem("div", null,
+          createElem("input",
+            { type: "checkbox", bindTo: checkboxAutoSkipDuplicates, id: "checkboxAutoSkipDuplicates" }),
+          createElem("label",
+            { htmlFor: "checkboxAutoSkipDuplicates", style: { margin: "0 0 0 .5em" } },
+            "Toujours sélectionner la première école/classe en cas de résultats similaires."),
+        ),
         createElem(
           "button",
           { type: "submit", bindTo: submitButtonRef },
@@ -294,7 +312,7 @@ const localforage = window.localforage;
         right: "0",
         visibility: "hidden",
         backgroundColor: "pink",
-        minWidth: "200px",
+        minWidth: "350px",
         cursor: "pointer",
         padding: "10px",
         zIndex: "999",
@@ -342,6 +360,8 @@ const localforage = window.localforage;
     )
   );
 
+  /** @type {TaskParams | undefined} */
+  let _lastTaskParams;
   /**
    * @param {Task | null} [task]
    */
@@ -354,6 +374,13 @@ const localforage = window.localforage;
     }
 
     taskWindow.style.visibility = "visible";
+
+    const taskParams = taskMap[task.name];
+    if (_lastTaskParams !== taskParams) {
+      _lastTaskParams?.actionsElems?.forEach(e => e.remove());
+      taskParams.actionsElems?.forEach(e => taskWindow.appendChild(e));
+      _lastTaskParams = taskParams;
+    }
 
     if (taskWindowResumeButton.current)
       taskWindowResumeButton.current.style.display = task.isPaused
@@ -398,7 +425,7 @@ const localforage = window.localforage;
 
   /**
    * @typedef {{
-   *  name: string,
+   *  name: keyof typeof taskMap,
    *  description?: string,
    *  isPaused: boolean,
    *  stepName: "start" | "success" | string,
@@ -409,9 +436,34 @@ const localforage = window.localforage;
    * }} Task
    */
 
+  /**
+   * @typedef {{
+   *    taskFn: ((task: Task)=> Promise<void>);
+   *    actionsElems?: Element[];
+   * }} TaskParams
+   */
+
+  /** @type {TaskParams} */
+  const fillContractClassesTaskParams = {
+    taskFn: fillContractClassesTaskFn,
+    actionsElems: [
+      createElem("button", {
+        async onclick(e) {
+          e.stopPropagation();
+          if (!confirm("Êtes vous sûr de vouloir passer au contrat suivant?"))
+            return;
+          const task = await getCurrentTask();
+          if (!task) return;
+          nextTaskStep("endOfLoop", { ...task, isPaused: false });
+        }
+      }, "Passer au contrat suivant")
+    ]
+  }
+
   const taskMap = {
-    test: testTask,
-    fillContractClasses: fillContractClassesTask,
+    /** @type {TaskParams} */
+    test: { taskFn: testTask },
+    fillContractClasses: fillContractClassesTaskParams,
   };
 
   async function handleTasks() {
@@ -430,7 +482,7 @@ const localforage = window.localforage;
     console.info(`handling task ${task.name}, step ${task.stepName}`, task);
 
     try {
-      await taskMap[task.name](task);
+      await taskMap[task.name].taskFn(task);
     } catch (e) {
       const brokenTask = await getCurrentTask();
       console.error(
@@ -496,6 +548,8 @@ const localforage = window.localforage;
    *      };
    *      contractsIds: string[];
    *      allPeople: FillContractsClassePerson[];
+   *      shouldSelectFirstDuplicate: boolean;
+   *      contractsNotFound: {[id:string]: {fname:string, lname:string}};
    * }} FillContractClassesSharedData
    *
    * @typedef {Omit<Task, "sharedData"> & {
@@ -504,11 +558,16 @@ const localforage = window.localforage;
    *
    * @param {FillContractClasseTask} task
    */
-  async function fillContractClassesTask(task) {
+  async function fillContractClassesTaskFn(task) {
+    if (locale && locale.substring(0, 2) !== "fr") {
+      alert("Cette tâche supporte uniquement le site en français.\n" +
+        "Changez la langue et continuez la tâche");
+      throw new Error("Cette tâche supporte uniquement le site en français.");
+    }
     const personId = task.sharedData.contractsIds[0];
     const person = task.sharedData.contracts[personId];
     switch (task.stepName) {
-      case "start":
+      case "start": {
         if (task.sharedData.contractsIds.length === 0) {
           nextTaskStep("success", task);
           return;
@@ -516,8 +575,9 @@ const localforage = window.localforage;
         nextTaskStep("searchPerson", task);
 
         return;
+      }
 
-      case "searchPerson":
+      case "searchPerson": {
         if (!urlCheckOrGo("/icare/Be/PersonenList.do?suchen=firstSearch"))
           return;
 
@@ -534,17 +594,16 @@ const localforage = window.localforage;
         if (!personIdInput) throw new Error("person input not found");
         personIdInput.value = personId;
 
-        /** @type {HTMLFormElement | null} */
-        const personForm = document.querySelector(
-          "form#filterForm[name=PersonenListeForm]"
-        );
-        personForm?.submit();
+        /** @type {HTMLButtonElement | null} */
+        const submitButton = document.querySelector("form#filterForm .float-right button[type=submit]");
+        submitButton?.click();
 
-        nextTaskStep("findPerson", task);
+        nextTaskStep("findPerson", task, false);
 
         return;
+      }
 
-      case "findPerson":
+      case "findPerson": {
         if (!urlCheck("/icare/Be/PersonenList.do", "?suchen=firstSearch"))
           return;
 
@@ -583,14 +642,14 @@ const localforage = window.localforage;
           do {
             const res = prompt(
               "Personne exacte introuvable.\n" +
-                `Recherche: ${person["e prenom"]} ${person["e nom"]} [${personId}]` +
-                "Veuillez sélectionner la bonne personne:\n" +
-                foundPeople
-                  .map(
-                    (p, i) =>
-                      `[${i + 1}] ${p.Prenom} ${p.Nom} ${p.DateNaissance}`
-                  )
-                  .join("\n"),
+              `Recherche: ${person["e prenom"]} ${person["e nom"]} [${personId}]` +
+              "Veuillez sélectionner la bonne personne:\n" +
+              foundPeople
+                .map(
+                  (p, i) =>
+                    `[${i + 1}] ${p.Prenom} ${p.Nom} ${p.DateNaissance}`
+                )
+                .join("\n"),
               "1"
             );
             ind = parseInt(res ?? "");
@@ -620,8 +679,9 @@ const localforage = window.localforage;
         nextTaskStep("searchContract", task);
 
         return;
+      }
 
-      case "searchContract":
+      case "searchContract": {
         if (!urlCheckOrGo("/icare/Be/VertragList.do?reset=true")) return;
 
         /** @type {HTMLInputElement | null} */
@@ -642,13 +702,15 @@ const localforage = window.localforage;
           "form[name=VertragListeForm]"
         );
         if (!contractForm) throw new Error("contract form not found");
+
+        nextTaskStep("findContract", task, false);
+
         contractForm.submit();
 
-        nextTaskStep("findContract", task);
-
         return;
+      }
 
-      case "findContract":
+      case "findContract": {
         if (!urlCheck("/icare/Be/VertragList.do", "?reset=true")) return;
 
         /** @type {NodeListOf<HTMLTableRowElement>} */
@@ -657,11 +719,23 @@ const localforage = window.localforage;
         );
         if (contractLines.length !== 1) {
           alert(
-            "Contrat introuvable.\n" +
-              "Naviguez sur le contrat concerné et continuez la tâche.\n" +
-              `Institution: [${person["institution id"]}] ${person.institution} \n` +
-              `Pour: ${person["e prenom"]} ${person["e nom"]} [${personId}]`
+            "Contrat précis introuvable.\n" +
+            "Naviguez sur le contrat concerné et/ou continuez la tâche.\n" +
+            `Institution: [${person["institution id"]}] ${person.institution} \n` +
+            `Pour: ${person["e prenom"]} ${person["e nom"]} [${personId}]`
           );
+          /** @type {FillContractClasseTask} */
+          const newTask = {
+            ...task,
+            sharedData: {
+              ...task.sharedData,
+              contractsNotFound: {
+                ...task.sharedData.contractsNotFound,
+                [personId]: { fname: person["e prenom"], lname: person["e nom"] }
+              }
+            }
+          }
+          await setCurrentTask(newTask);
           throw new Warning(
             `Contrat précis introuvable. p-id:${personId}. ${contractLines.length} résultat(s)`
           );
@@ -677,13 +751,15 @@ const localforage = window.localforage;
 
         const contractLink = contractInfosTD[0].querySelector("a");
         if (!contractLink) throw new Error("contract link not found");
+
+        nextTaskStep("openContractEditPage", task, false);
+
         contractLink.click();
 
-        nextTaskStep("openContractEditPage", task);
-
         return;
+      }
 
-      case "openContractEditPage":
+      case "openContractEditPage": {
         if (
           !urlCheck(
             "/icare/Be/VertragEdit.do?method=main&aktuelle=true&theVerId="
@@ -696,24 +772,23 @@ const localforage = window.localforage;
         if (!nameAndIdH2?.textContent?.includes(personId))
           throw new Error("L'id du contrat ne correspond pas.");
 
-        /** @type {HTMLIFrameElement | null} */
-        const iframe = document.querySelector(
-          "iframe[name=klassifizierungframe]"
-        );
+        /** @type {HTMLIFrameElement} */
+        const iframe = await waitForSelector("iframe[name=klassifizierungframe]");
         if (!iframe) throw new Error("iframe de contrat introuvable");
-        console.log(iframe.src);
+        console.log("iframe src", iframe.src);
+
+        nextTaskStep("fillContractCollege", task, false);
+
         window.location.href = iframe.src;
 
-        nextTaskStep("fillContractCollege", task);
-
         return;
+      }
 
-      case "fillContractCollege":
-        if (
-          !urlCheck(
-            "/icare/PrepareKlassifizierung.do?table=TVertrag&showTables=&col=ver_id&showCols=&addTables=&addCols=&value="
-          )
-        )
+      case "fillContractCollege": {
+        if (!urlCheck([
+          "/icare/KlassifizierungSave.do",
+          "/icare/PrepareKlassifizierung.do"
+        ]))
           return;
 
         await fillContractData(
@@ -726,12 +801,14 @@ const localforage = window.localforage;
         nextTaskStep("fillContractClass", task, false);
 
         return;
+      }
 
-      case "fillContractClass":
+      case "fillContractClass": {
         if (
-          !urlCheck(
-            "/icare/PrepareKlassifizierung.do?table=TVertrag&showTables=&col=ver_id&showCols=&addTables=&addCols=&value="
-          )
+          !urlCheck([
+            "/icare/KlassifizierungSave.do",
+            "/icare/PrepareKlassifizierung.do",
+          ])
         )
           return;
 
@@ -739,12 +816,41 @@ const localforage = window.localforage;
           task,
           "Classe et enseignant",
           person.schoolClass,
-          "fillContractClass"
+          "endOfLoop"
         );
 
-        nextTaskStep("fillContractClass", task, false);
+        nextTaskStep("endOfLoop", task, false);
 
         return;
+      }
+
+      case "endOfLoop": {
+        /** @type {FillContractClasseTask} */
+        const newTask = {
+          ...task,
+          sharedData: {
+            ...task.sharedData,
+            contractsIds: task.sharedData.contractsIds.slice(1),
+          }
+        }
+        nextTaskStep("start", newTask);
+        return;
+      }
+      case "success": {
+        console.info("CONTRATS INTROUVABLES:", task.sharedData.contractsNotFound);
+        alert(
+          "Tâche terminée!\n" +
+          `${task.sharedData.contractsNotFound.length} contrats pas trouvés.\n` +
+          Object.entries(task.sharedData.contractsNotFound)
+            .map(([id, { fname, lname }], i) => `${i}. [${id}] ${fname} ${lname}`)
+            .join("\n")
+        )
+        await removeCurrentTask();
+        return;
+      }
+      default: {
+        throw new Error("Étape introuvable");
+      }
     }
   }
 
@@ -763,21 +869,25 @@ const localforage = window.localforage;
     /** @type {HTMLButtonElement | undefined} */
     let saveButton;
 
-    for (const table of tables) {
+    for (let tableIndex = 0; tableIndex < tables.length; tableIndex++) {
+      const table = tables[tableIndex];
+
       /** @type {NodeListOf<HTMLTableRowElement>} */
       const TRList = table.querySelectorAll(
         "table > thead > tr, table > tbody > tr"
       );
       const TRs = [...TRList];
 
-      const nameTR = TRs.at(-2);
+      const nameTR = tableIndex === 0 ? TRs[1] : TRs[0];
       const nameFromTR = nameTR?.textContent?.trim();
       if (!nameFromTR?.includes(name)) continue;
 
-      //TODO: Selector doesn't work
-      const dataTR = TRs.at(-1);
+      const dataTR = tableIndex === 0 ? TRs[2] : TRs[1];
+
+      // @ts-ignore element type specified in the query
       select =
         dataTR?.querySelector("td > span > select.inputNoWidth") ?? undefined;
+      // @ts-ignore element type specified in the query
       saveButton = dataTR?.querySelector("td > button.link") ?? undefined;
       if (
         !saveButton
@@ -800,7 +910,10 @@ const localforage = window.localforage;
 
     if (
       select.value !== "0" &&
-      !confirm(`${name} déjé renseigné.\n Souhaitez vous l'écraser?`)
+      !confirm(
+        `${name} déjà renseigné.\nSouhaitez vous l'écraser?\n` +
+        `Valeur: '${value}'`
+      )
     ) {
       alert(
         `Vérifiez/renseignez le collège, enregistrez puis continuez la tâche.`
@@ -812,22 +925,30 @@ const localforage = window.localforage;
     //find matching name
     const optionsToSelect = value
       ? [...select.options].filter((op) =>
-          op.textContent?.trim().includes(value.trim())
+        op.textContent?.trim().split("''").join("'").includes(
+          value.trim().split("''").join("'")
         )
+      )
       : [];
 
     let resIndexChosen = 1;
-    if (optionsToSelect.length > 1) {
+    if (!task.sharedData.shouldSelectFirstDuplicate && optionsToSelect.length > 1) {
       do {
         const txtRes = prompt(
-          `Veuillez choisir la bonne valeur pour '${name}.\n'` +
-            `Personne: ${person["e prenom"]} ${person["e nom"]} [${person["e id"]}]\n` +
-            optionsToSelect
-              .map((o, i) => `[${i + 1}] ${o.textContent?.trim()}`)
-              .join("\n"),
-          "1"
+          `Veuillez choisir la bonne valeur pour '${name}'.\n\n` +
+          `Valeur cherchée: '${value}'\n` +
+          `Personne: ${person["e prenom"]} ${person["e nom"]} [${person["e id"]}]\n\n` +
+          optionsToSelect
+            .map((o, i) => `[${i + 1}] ${o.textContent?.trim()}`)
+            .join("\n"),
+          resIndexChosen.toString()
         );
-        resIndexChosen = parseInt(txtRes ?? "");
+        if (txtRes === null) {
+          alert(`Entrez manuellement la valeur de ${name}.\nValeur du fichier: ${value}`);
+          nextTaskStep(nextStep, task, false);
+          throw new Warning(`Entrer manuellement: ${name}: '${value}'`);
+        }
+        resIndexChosen = parseInt(txtRes);
       } while (
         isNaN(resIndexChosen) ||
         resIndexChosen < 1 ||
@@ -839,10 +960,10 @@ const localforage = window.localforage;
 
     if (!optionToSelect?.value) {
       alert(
-        `${name} introuvable dans les listes. Renseignez le manuellement puis enregistrez. Ensuite continuez la tâche.`
+        `${name}: '${value}': introuvable dans les listes. Renseignez le manuellement puis enregistrez. Ensuite continuez la tâche.`
       );
       nextTaskStep(nextStep, task, false);
-      throw new Warning(`${name} introuvable. Renseigner manuellement.`);
+      throw new Warning(`${name}: '${value}' introuvable. Renseigner manuellement.`);
     }
 
     select.value = optionToSelect.value;
@@ -916,15 +1037,26 @@ const localforage = window.localforage;
     if (autoStart) handleTasks();
   }
 
+  /** @type {(stepName:string)=>Promise<void>} */
+  // @ts-ignore
+  window.setStep = async (stepName) => {
+    const task = await getCurrentTask();
+    if (!task) throw new Error("No current task");
+    return await nextTaskStep(stepName, task);
+  }
+
   //
   //LIB
   //
 
   /**
+   * @template {HTMLElement} T
    * @param {string | (()=>(HTMLElement|null))} selector
-   * @return {Promise<Element>}
+   * @return {Promise<T>}
    */
   function waitForSelector(selector, checkInterval = 100, maxChecks = 50) {
+    /** @type {T | null} */
+    // @ts-ignore because all html elements inherit from HTMLElement anyways
     const res =
       typeof selector === "function"
         ? selector()
@@ -939,6 +1071,7 @@ const localforage = window.localforage;
         setTimeout(
           () =>
             waitForSelector(selector, checkInterval, maxChecks - 1)
+              // @ts-ignore because all html elements inherit from HTMLElement anyways
               .then(resolve)
               .catch(reject),
           checkInterval
@@ -985,12 +1118,11 @@ const localforage = window.localforage;
   }
 
   /**
-   * @template T
+   * @template {Record<string, any>} T
    * @param {T} obj
    * @param {(keyof T)[]} keys
    */
   function objectContainsKeys(obj, keys) {
-    // @ts-ignore
     const objKeys = Object.keys(obj);
     return keys.every((k) => objKeys.includes(k.toString()));
   }
@@ -1020,12 +1152,15 @@ const localforage = window.localforage;
   }
 
   /**
-   * @param {string} url
+   * @param {string | string[]} url
    * @param {string} [exclude]
    */
   function urlCheck(url, exclude) {
-    if (exclude && window.location.href.includes(exclude)) return false;
-    return window.location.href.includes(url);
+    if (typeof url === "string")
+      url = [url];
+    if (exclude && window.location.href.includes(exclude))
+      return false;
+    return url.some(u => window.location.href.includes(u));
   }
 
   /**
@@ -1037,7 +1172,7 @@ const localforage = window.localforage;
    * @template T
    * @typedef {Partial<Omit<T, "style">> & Record<string, any> & {
    *  bindTo?: BindRef<HTMLElement>,
-   *  style?: Partial<HTMLElement["style"]>
+   *  style?: Partial<HTMLElement["style"] & Record<`--${string}`, string>>
    * } } ElemProps
    * //[evt: `on${string}`]:()=>any,
    */
@@ -1053,17 +1188,22 @@ const localforage = window.localforage;
    * @return {HTMLElementTagNameMap[ElemType]}
    */
   function createElem(type, props, ...children) {
-    const DEEP_PROPS = ["dataset", "style"];
     const el = document.createElement(type);
     Object.entries(props ?? {}).forEach(([name, val]) => {
-      if (DEEP_PROPS.includes(name)) Object.assign(el[name], val);
-      // else if (name.substring(0, 2) === "on" && name[2].toUpperCase() === name[2])
-      //     // @ts-ignore
-      //     el.addEventListener(name.substring(2).toLowerCase(), val);
-      else if (name === "bindTo")
-        // @ts-ignore
+      if (name === "dataset") {
+        Object.assign(el[name], val);
+      } else if (name === "style") {
+        Object.entries(val).forEach(([k, v]) => {
+          if (el.style[k] !== undefined)
+            el.style[k] = v;
+          else
+            el.style.setProperty(k, v)
+        });
+      } else if (name === "bindTo") {
         val.current = el;
-      else el[name] = val;
+      } else {
+        el[name] = val;
+      }
     });
     children.forEach((child) =>
       el.appendChild(
