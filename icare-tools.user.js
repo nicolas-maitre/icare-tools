@@ -1,13 +1,14 @@
 // @ts-check
 // ==UserScript==
-// @name        iCare Helpers
+// @name        iCare Task Tools
 // @namespace   Violentmonkey Scripts
 // @noframes
 // @match       https://icare-vali.lausanne.ch/icare/*
+// @match       https://icare.lausanne.ch/icare/*
 // @grant       none
 // @version     1.0
 // @author      Nicolas Maitre
-// @description 07/10/2022 14:54:13
+// @description Task scheduler for icare
 // @require     https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js
 // @require     https://unpkg.com/localforage@1.10.0/dist/localforage.min.js
 // ==/UserScript==
@@ -97,14 +98,10 @@ const locale = window.locale;
   }
 
   function WindowFillContractsClassesSection() {
-    /** @type {BindRef<HTMLInputElement>} */
-    const inputAllStudents = {};
-    /** @type {BindRef<HTMLInputElement>} */
-    const inputWrongContracts = {};
-    /** @type {BindRef<HTMLInputElement>} */
-    const checkboxAutoSkipDuplicates = {};
     /** @type {BindRef<HTMLButtonElement>} */
     const submitButtonRef = {};
+    /** @type {BindRef<HTMLFormElement>} */
+    const formRef = {};
 
     return createElem(
       "p",
@@ -116,33 +113,35 @@ const locale = window.locale;
           async onsubmit(evt) {
             evt.preventDefault();
             //type checking
-            if (
-              !(
-                inputAllStudents.current &&
-                inputWrongContracts.current &&
-                checkboxAutoSkipDuplicates.current &&
-                submitButtonRef.current
-              )
-            ) {
+            if (!submitButtonRef.current || !formRef.current) {
               alert("erreur d'initialisation");
               return;
             }
 
-            const allPeopleFile = inputAllStudents.current.files?.item(0);
-            const wrongContractsFile =
-              inputWrongContracts.current.files?.item(0);
-            if (!allPeopleFile || !wrongContractsFile) {
+            /**
+             * @typedef {{
+             *    allStudents: File,
+             *    wrongContracts: File,
+             *    autoSkipDuplicates?: "on",
+             *    autoSkipNotFound?: "on",
+             *    existingDataStrat: ExistingDataStrategy,
+             * }} FormEntries
+             * @type {FormEntries} */
+            // @ts-ignore We know what's in the form
+            const formData = Object.fromEntries(
+              new FormData(formRef.current).entries()
+            );
+
+            if (!formData.allStudents || !formData.wrongContracts) {
               alert("Merci de déposer tous les fichiers");
               return;
             }
 
-            // if (!confirm("Êtes vous sûr de vouloir continuer?"))
-            //     return;
             submitButtonRef.current.disabled = true;
 
             const [allPeopleBuffer, wrongContractsBuffer] = await Promise.all([
-              allPeopleFile.arrayBuffer(),
-              wrongContractsFile.arrayBuffer(),
+              formData.allStudents.arrayBuffer(),
+              formData.wrongContracts.arrayBuffer(),
             ]);
 
             const allPeopleWorkbook = XLSX.read(allPeopleBuffer);
@@ -170,7 +169,7 @@ const locale = window.locale;
             const wrongContractsWorkbook = XLSX.read(wrongContractsBuffer);
             const wrongContractsSheet =
               wrongContractsWorkbook.Sheets[
-              wrongContractsWorkbook.SheetNames[0]
+                wrongContractsWorkbook.SheetNames[0]
               ];
             /** @type {FillContractsClasseContract[]} */
             const wrongContractsJSON =
@@ -197,19 +196,23 @@ const locale = window.locale;
               wrongContractsJSON.map((wc) => [wc["e id"], wc])
             );
 
-            const contractsIdsToHandle =
-              Object.keys(contractsById)
-                .sort((a, b) => parseInt(a) - parseInt(b))
-            // .slice(0, 10); //debug
+            const contractsIdsToHandle = Object.keys(contractsById).sort(
+              (a, b) => parseInt(a) - parseInt(b)
+            );
+            // .slice(0, 15); //debug
 
+            // const contractsIdsToHandle = [];
 
             /** @type {FillContractClassesSharedData} */
             const taskData = {
               contracts: contractsById,
               contractsIds: contractsIdsToHandle,
               allPeople: allPeopleJSON,
-              shouldSelectFirstDuplicate: checkboxAutoSkipDuplicates.current.checked,
+              existingDataStrategy: formData.existingDataStrat,
+              shouldSelectFirstDuplicate: formData.autoSkipDuplicates === "on",
+              shouldSkipContractNotFound: formData.autoSkipNotFound === "on",
               contractsNotFound: {},
+              contractByContractMode: false,
             };
 
             setNewTask(
@@ -221,6 +224,7 @@ const locale = window.locale;
             hideWindow();
             submitButtonRef.current.disabled = false;
           },
+          bindTo: formRef,
           style: {
             borderLeft: "3px solid gray",
             paddingLeft: "10px",
@@ -236,10 +240,10 @@ const locale = window.locale;
           "Feuille Excel avec tous les élèves (Nom, Prenom, DateNaissance, ClasseCourante)"
         ),
         createElem("input", {
+          name: "allStudents",
           type: "file",
           accept: ".xlsx, .xls",
           required: true,
-          bindTo: inputAllStudents,
           id: "inputAllStudents",
         }),
         createElem(
@@ -248,18 +252,93 @@ const locale = window.locale;
           "Feuille Excel avec les contrats incomplèts (e id, e nom, e prenom, institution, institution id)"
         ),
         createElem("input", {
+          name: "wrongContracts",
           type: "file",
           accept: ".xlsx, .xls",
           required: true,
-          bindTo: inputWrongContracts,
           id: "inputWrongContracts",
         }),
-        createElem("div", null,
-          createElem("input",
-            { type: "checkbox", bindTo: checkboxAutoSkipDuplicates, id: "checkboxAutoSkipDuplicates" }),
-          createElem("label",
-            { htmlFor: "checkboxAutoSkipDuplicates", style: { margin: "0 0 0 .5em" } },
-            "Toujours sélectionner la première école/classe en cas de résultats similaires."),
+        createElem(
+          "div",
+          null,
+          createElem("input", {
+            type: "checkbox",
+            id: "checkboxAutoSkipDuplicates",
+            name: "autoSkipDuplicates",
+          }),
+          createElem(
+            "label",
+            {
+              htmlFor: "checkboxAutoSkipDuplicates",
+              style: { margin: "0 0 0 .5em" },
+            },
+            "Toujours sélectionner la première école/classe en cas de résultats similaires."
+          )
+        ),
+        createElem(
+          "div",
+          null,
+          createElem("input", {
+            type: "checkbox",
+            id: "checkboxAutoSkipNotFound",
+            name: "autoSkipNotFound",
+          }),
+          createElem(
+            "label",
+            {
+              htmlFor: "checkboxAutoSkipNotFound",
+              style: { margin: "0 0 0 .5em" },
+            },
+            "Toujours ignorer les contrats introuvable. (Une liste sera affichée à la fin de l'éxecution)"
+          )
+        ),
+        createElem(
+          "fieldset",
+          null,
+          createElem(
+            "legend",
+            { style: { fontSize: "1em", marginInlineEnd: "1em" } },
+            "Si une donnée est déjà enregistrée"
+          ),
+          createElem("input", {
+            name: "existingDataStrat",
+            type: "radio",
+            id: "radioExistingDataStratAsk",
+            value: "ask",
+            style: { margin: "0 .5em" },
+            checked: true,
+          }),
+          createElem(
+            "label",
+            { htmlFor: "radioExistingDataStratAsk" },
+            "Toujours demander"
+          ),
+          createElem("br"),
+          createElem("input", {
+            name: "existingDataStrat",
+            type: "radio",
+            id: "radioExistingDataStratSkip",
+            value: "skip",
+            style: { margin: "0 .5em" },
+          }),
+          createElem(
+            "label",
+            { htmlFor: "radioExistingDataStratSkip" },
+            "Toujours ignorer"
+          ),
+          createElem("br"),
+          createElem("input", {
+            name: "existingDataStrat",
+            type: "radio",
+            id: "radioExistingDataStratForce",
+            value: "force",
+            style: { margin: "0 .5em" },
+          }),
+          createElem(
+            "label",
+            { htmlFor: "radioExistingDataStratForce" },
+            "Toujours remplacer"
+          )
         ),
         createElem(
           "button",
@@ -377,8 +456,8 @@ const locale = window.locale;
 
     const taskParams = taskMap[task.name];
     if (_lastTaskParams !== taskParams) {
-      _lastTaskParams?.actionsElems?.forEach(e => e.remove());
-      taskParams.actionsElems?.forEach(e => taskWindow.appendChild(e));
+      _lastTaskParams?.actionsElems?.forEach((e) => e.remove());
+      taskParams.actionsElems?.forEach((e) => taskWindow.appendChild(e));
       _lastTaskParams = taskParams;
     }
 
@@ -430,6 +509,7 @@ const locale = window.locale;
    *  isPaused: boolean,
    *  stepName: "start" | "success" | string,
    *  startedAt: number,
+   *  endedAt?: number,
    *  stepStartedAt: number,
    *  lastMessage?: string,
    *  sharedData: any,
@@ -447,18 +527,22 @@ const locale = window.locale;
   const fillContractClassesTaskParams = {
     taskFn: fillContractClassesTaskFn,
     actionsElems: [
-      createElem("button", {
-        async onclick(e) {
-          e.stopPropagation();
-          if (!confirm("Êtes vous sûr de vouloir passer au contrat suivant?"))
-            return;
-          const task = await getCurrentTask();
-          if (!task) return;
-          nextTaskStep("endOfLoop", { ...task, isPaused: false });
-        }
-      }, "Passer au contrat suivant")
-    ]
-  }
+      createElem(
+        "button",
+        {
+          async onclick(e) {
+            e.stopPropagation();
+            if (!confirm("Êtes vous sûr de vouloir passer au contrat suivant?"))
+              return;
+            const task = await getCurrentTask();
+            if (!task) return;
+            nextTaskStep("endOfLoop", { ...task, isPaused: false });
+          },
+        },
+        "Passer au contrat suivant"
+      ),
+    ],
+  };
 
   const taskMap = {
     /** @type {TaskParams} */
@@ -542,6 +626,8 @@ const locale = window.locale;
    *      "BatimentNomOfficiel":string
    *  }} FillContractsClassePerson
    *
+   * @typedef {"ask" | "skip" | "force"} ExistingDataStrategy
+   *
    * @typedef {{
    *      contracts: {
    *          [id: string]: FillContractsClasseContract
@@ -549,7 +635,10 @@ const locale = window.locale;
    *      contractsIds: string[];
    *      allPeople: FillContractsClassePerson[];
    *      shouldSelectFirstDuplicate: boolean;
-   *      contractsNotFound: {[id:string]: {fname:string, lname:string}};
+   *      shouldSkipContractNotFound: boolean;
+   *      existingDataStrategy: ExistingDataStrategy,
+   *      contractsNotFound: {[id:string]: {fname:string, lname:string, count: number}};
+   *      contractByContractMode: boolean;
    * }} FillContractClassesSharedData
    *
    * @typedef {Omit<Task, "sharedData"> & {
@@ -560,10 +649,31 @@ const locale = window.locale;
    */
   async function fillContractClassesTaskFn(task) {
     if (locale && locale.substring(0, 2) !== "fr") {
-      alert("Cette tâche supporte uniquement le site en français.\n" +
-        "Changez la langue et continuez la tâche");
+      alert(
+        "Cette tâche supporte uniquement le site en français.\n" +
+          "Changez la langue et continuez la tâche"
+      );
       throw new Error("Cette tâche supporte uniquement le site en français.");
     }
+
+    // @ts-ignore that's the goal dammit
+    if (!window.cbc)
+      // @ts-ignore
+      window.cbc = async (mode = true) => {
+        const lateTask = await getCurrentTask();
+        if (!lateTask) return;
+        /** @type {FillContractClasseTask} */
+        const newTask = {
+          ...task,
+          sharedData: {
+            ...task.sharedData,
+            contractByContractMode: mode,
+          },
+          lastMessage: "Mode CBC activé!",
+        };
+        task = await setCurrentTask(newTask);
+      };
+
     const personId = task.sharedData.contractsIds[0];
     const person = task.sharedData.contracts[personId];
     switch (task.stepName) {
@@ -595,7 +705,9 @@ const locale = window.locale;
         personIdInput.value = personId;
 
         /** @type {HTMLButtonElement | null} */
-        const submitButton = document.querySelector("form#filterForm .float-right button[type=submit]");
+        const submitButton = document.querySelector(
+          "form#filterForm .float-right button[type=submit]"
+        );
         submitButton?.click();
 
         nextTaskStep("findPerson", task, false);
@@ -642,14 +754,14 @@ const locale = window.locale;
           do {
             const res = prompt(
               "Personne exacte introuvable.\n" +
-              `Recherche: ${person["e prenom"]} ${person["e nom"]} [${personId}]` +
-              "Veuillez sélectionner la bonne personne:\n" +
-              foundPeople
-                .map(
-                  (p, i) =>
-                    `[${i + 1}] ${p.Prenom} ${p.Nom} ${p.DateNaissance}`
-                )
-                .join("\n"),
+                `Recherche: ${person["e prenom"]} ${person["e nom"]} [${personId}]` +
+                "Veuillez sélectionner la bonne personne:\n" +
+                foundPeople
+                  .map(
+                    (p, i) =>
+                      `[${i + 1}] ${p.Prenom} ${p.Nom} ${p.DateNaissance}`
+                  )
+                  .join("\n"),
               "1"
             );
             ind = parseInt(res ?? "");
@@ -695,7 +807,44 @@ const locale = window.locale;
         );
         if (!institutionIdSelect)
           throw new Error("institution input not found");
-        institutionIdSelect.value = person["institution id"].toString();
+
+        const institutionId = person["institution id"].toString();
+
+        institutionIdSelect.value = institutionId;
+        if (institutionIdSelect.value !== institutionId) {
+          //store contract not found
+          task = await setCurrentTask({
+            ...task,
+            sharedData: {
+              ...task.sharedData,
+              contractsNotFound: {
+                ...task.sharedData.contractsNotFound,
+                [personId]: {
+                  fname: person["e prenom"],
+                  lname: person["e nom"],
+                },
+              },
+            },
+          });
+
+          if (task.sharedData.shouldSkipContractNotFound) {
+            console.info(
+              "skipping contract because the institution was not found"
+            );
+            nextTaskStep("endOfLoop", task);
+            return;
+          }
+          alert(
+            "La recherche ne peut pas être effectuée car l'institution n'est pas disponible.\n" +
+              "Trouvez et naviguez manuellement sur le contrat puis continuez la tâche.\n" +
+              `Institution: [${person["institution id"]}] ${person.institution} \n` +
+              `Pour: ${person["e prenom"]} ${person["e nom"]} [${personId}]`
+          );
+          nextTaskStep("openContractEditPage", task, false);
+          throw new Warning(
+            `Institution introuvable:[${institutionId}] "${person.institution}", p-id:${personId}.`
+          );
+        }
 
         /** @type {HTMLFormElement | null} */
         const contractForm = document.querySelector(
@@ -717,13 +866,10 @@ const locale = window.locale;
         const contractLines = document.querySelectorAll(
           "#ver.dataTable > tbody > tr"
         );
+
+        //Precise contract not found
         if (contractLines.length !== 1) {
-          alert(
-            "Contrat précis introuvable.\n" +
-            "Naviguez sur le contrat concerné et/ou continuez la tâche.\n" +
-            `Institution: [${person["institution id"]}] ${person.institution} \n` +
-            `Pour: ${person["e prenom"]} ${person["e nom"]} [${personId}]`
-          );
+          //Store contract that wasn't found
           /** @type {FillContractClasseTask} */
           const newTask = {
             ...task,
@@ -731,11 +877,35 @@ const locale = window.locale;
               ...task.sharedData,
               contractsNotFound: {
                 ...task.sharedData.contractsNotFound,
-                [personId]: { fname: person["e prenom"], lname: person["e nom"] }
-              }
-            }
+                [personId]: {
+                  fname: person["e prenom"],
+                  lname: person["e nom"],
+                  count: contractLines.length,
+                },
+              },
+            },
+          };
+          task = await setCurrentTask(newTask);
+
+          //auto skip if no contract found
+          if (
+            task.sharedData.shouldSkipContractNotFound &&
+            contractLines.length === 0
+          ) {
+            console.info("skipping contract because it wasn't found.");
+            nextTaskStep("endOfLoop", task);
+            return;
           }
-          await setCurrentTask(newTask);
+
+          //prompt user to choose correct contract
+          alert(
+            "Contrat précis introuvable.\n" +
+              "Naviguez sur le contrat concerné et/ou continuez la tâche.\n" +
+              `Institution: [${person["institution id"]}] ${person.institution} \n` +
+              `Pour: ${person["e prenom"]} ${person["e nom"]} [${personId}]`
+          );
+          nextTaskStep("openContractEditPage", task, false);
+
           throw new Warning(
             `Contrat précis introuvable. p-id:${personId}. ${contractLines.length} résultat(s)`
           );
@@ -773,9 +943,18 @@ const locale = window.locale;
           throw new Error("L'id du contrat ne correspond pas.");
 
         /** @type {HTMLIFrameElement} */
-        const iframe = await waitForSelector("iframe[name=klassifizierungframe]");
+        const iframe = await waitForSelector(
+          "iframe[name=klassifizierungframe]"
+        );
         if (!iframe) throw new Error("iframe de contrat introuvable");
-        console.log("iframe src", iframe.src);
+        const iframeSrc = await waitForValue(() => iframe.src || undefined);
+        if (!iframeSrc) {
+          console.log("iframe src", iframe.src, iframe);
+          alert(
+            "Impossible d'accéder aux modifications. Essayez de recharger la page puis continuez la tâche"
+          );
+          throw new Error("url de l'iframe introuvable. id:" + personId);
+        }
 
         nextTaskStep("fillContractCollege", task, false);
 
@@ -785,10 +964,12 @@ const locale = window.locale;
       }
 
       case "fillContractCollege": {
-        if (!urlCheck([
-          "/icare/KlassifizierungSave.do",
-          "/icare/PrepareKlassifizierung.do"
-        ]))
+        if (
+          !urlCheck([
+            "/icare/KlassifizierungSave.do",
+            "/icare/PrepareKlassifizierung.do",
+          ])
+        )
           return;
 
         await fillContractData(
@@ -831,20 +1012,67 @@ const locale = window.locale;
           sharedData: {
             ...task.sharedData,
             contractsIds: task.sharedData.contractsIds.slice(1),
-          }
+          },
+        };
+
+        //step by step check
+        if (newTask.sharedData.contractByContractMode) {
+          nextTaskStep("start", newTask, false);
+          throw new Warning("Mode pas à pas");
         }
+
         nextTaskStep("start", newTask);
+
         return;
       }
       case "success": {
-        console.info("CONTRATS INTROUVABLES:", task.sharedData.contractsNotFound);
+        console.info(
+          "CONTRATS INTROUVABLES:",
+          task.sharedData.contractsNotFound
+        );
+        //store end time
+        const endedAt = Date.now();
+        task = await setCurrentTask({ ...task, endedAt });
+
+        //store finished task
+        (async () => {
+          const finishedTasks =
+            (await localforage.getItem("LTFinishedTasks")) ?? [];
+          /** @type {FillContractClasseTask} */
+          const cleanTask = {
+            ...task,
+            sharedData: {
+              ...task.sharedData,
+              allPeople: [],
+              contracts: {},
+            },
+          };
+          await localforage.setItem("LTFinishedTasks", [
+            ...finishedTasks,
+            cleanTask,
+          ]);
+        })();
+
+        const elapsedTimeString = new Date(endedAt - task.startedAt)
+          .toISOString()
+          .substring(11, 19);
+
+        const contractsNotFoundEntries = Object.entries(
+          task.sharedData.contractsNotFound
+        );
+        //display end of task infos
         alert(
-          "Tâche terminée!\n" +
-          `${task.sharedData.contractsNotFound.length} contrats pas trouvés.\n` +
-          Object.entries(task.sharedData.contractsNotFound)
-            .map(([id, { fname, lname }], i) => `${i}. [${id}] ${fname} ${lname}`)
-            .join("\n")
-        )
+          `Tâche terminée! (en ${elapsedTimeString}) \n` +
+            `${contractsNotFoundEntries.length} contrats pas trouvés sur ${
+              Object.keys(task.sharedData.contracts).length
+            }.\n` +
+            contractsNotFoundEntries
+              .map(
+                ([id, { fname, lname }], i) => `${i}. [${id}] ${fname} ${lname}`
+              )
+              .join("\n")
+        );
+
         await removeCurrentTask();
         return;
       }
@@ -862,6 +1090,20 @@ const locale = window.locale;
    */
   async function fillContractData(task, name, value, nextStep) {
     const person = task.sharedData.contracts[task.sharedData.contractsIds[0]];
+
+    if (value === undefined) {
+      alert(
+        `Aucune valeur fournie pour ${name}.\n` +
+          `
+      Entrez la donnée manuellement et continuez la tâche\n` +
+          `Personne: [${person["e id"]}] ${person["e prenom"]} ${person["e nom"]}`
+      );
+      nextTaskStep(nextStep, task, false);
+      throw new Error(
+        `Aucune valeur fournie pour ${name}. p.id: ${person["e id"]}`
+      );
+    }
+
     /** @type {NodeListOf<HTMLTableElement>} */
     const tables = document.querySelectorAll("#theKlForm > table.sortable");
     /** @type {HTMLSelectElement | undefined} */
@@ -908,45 +1150,65 @@ const locale = window.locale;
       throw new Warning(`Ligne ${name} introuvable.`);
     }
 
-    if (
-      select.value !== "0" &&
-      !confirm(
-        `${name} déjà renseigné.\nSouhaitez vous l'écraser?\n` +
-        `Valeur: '${value}'`
-      )
-    ) {
-      alert(
-        `Vérifiez/renseignez le collège, enregistrez puis continuez la tâche.`
-      );
-      nextTaskStep(nextStep, task, false);
-      throw new Warning(`Vérifier/Renseigner manuellement ${name}`);
+    //Already a value inside the select
+    if (select.value !== "0") {
+      //Ask to overwrite
+      if (
+        task.sharedData.existingDataStrategy === "ask" &&
+        !confirm(
+          `${name} déjà renseigné.\nSouhaitez vous l'écraser?\n` +
+            `Valeur: '${value}'`
+        )
+      ) {
+        alert(
+          `Vérifiez/renseignez le collège, enregistrez puis continuez la tâche.`
+        );
+        nextTaskStep(nextStep, task, false);
+        throw new Warning(`Vérifier/Renseigner manuellement ${name}`);
+      }
+      //Skip to next step
+      else if (task.sharedData.existingDataStrategy === "skip") {
+        console.info(
+          "skipping to next step according to existingData strategy"
+        );
+        nextTaskStep(nextStep, task, true);
+        return;
+      }
     }
 
     //find matching name
-    const optionsToSelect = value
-      ? [...select.options].filter((op) =>
-        op.textContent?.trim().split("''").join("'").includes(
-          value.trim().split("''").join("'")
-        )
-      )
-      : [];
+    const optionsToSelect = [...select.options].filter((op) =>
+      op.textContent
+        ?.trim()
+        .split("''")
+        .join("'")
+        .includes(value.trim().split("''").join("'"))
+    );
 
     let resIndexChosen = 1;
-    if (!task.sharedData.shouldSelectFirstDuplicate && optionsToSelect.length > 1) {
+    if (
+      !task.sharedData.shouldSelectFirstDuplicate &&
+      optionsToSelect.length > 1
+    ) {
       do {
         const txtRes = prompt(
           `Veuillez choisir la bonne valeur pour '${name}'.\n\n` +
-          `Valeur cherchée: '${value}'\n` +
-          `Personne: ${person["e prenom"]} ${person["e nom"]} [${person["e id"]}]\n\n` +
-          optionsToSelect
-            .map((o, i) => `[${i + 1}] ${o.textContent?.trim()}`)
-            .join("\n"),
+            `Valeur cherchée: '${value}'\n` +
+            `Personne: ${person["e prenom"]} ${person["e nom"]} [${person["e id"]}]\n\n` +
+            optionsToSelect
+              .map((o, i) => `[${i + 1}] ${o.textContent?.trim()}`)
+              .join("\n"),
           resIndexChosen.toString()
         );
         if (txtRes === null) {
-          alert(`Entrez manuellement la valeur de ${name}.\nValeur du fichier: ${value}`);
+          alert(
+            `Entrez manuellement la valeur de ${name}.\nValeur du fichier: ${value}\n` +
+              `Personne: [${person["e id"]}] ${person["e prenom"]} ${person["e nom"]}`
+          );
           nextTaskStep(nextStep, task, false);
-          throw new Warning(`Entrer manuellement: ${name}: '${value}'`);
+          throw new Warning(
+            `Entrer manuellement: ${name}: "${value}". p.id: ${person["e id"]}`
+          );
         }
         resIndexChosen = parseInt(txtRes);
       } while (
@@ -960,10 +1222,13 @@ const locale = window.locale;
 
     if (!optionToSelect?.value) {
       alert(
-        `${name}: '${value}': introuvable dans les listes. Renseignez le manuellement puis enregistrez. Ensuite continuez la tâche.`
+        `${name}: '${value}': introuvable dans les listes. Renseignez le manuellement puis enregistrez. Ensuite continuez la tâche.\n` +
+          `Personne: [${person["e id"]}] ${person["e prenom"]} ${person["e nom"]}`
       );
       nextTaskStep(nextStep, task, false);
-      throw new Warning(`${name}: '${value}' introuvable. Renseigner manuellement.`);
+      throw new Warning(
+        `${name}: '${value}' introuvable. Renseigner manuellement. p.id: ${person["e id"]}`
+      );
     }
 
     select.value = optionToSelect.value;
@@ -988,6 +1253,8 @@ const locale = window.locale;
   async function getCurrentTask() {
     return await localforage.getItem("LTCurrentTask");
   }
+  // @ts-ignore we want to make it accessible
+  window.getCurrentTask = getCurrentTask;
 
   async function removeCurrentTask() {
     await localforage.removeItem("LTCurrentTask");
@@ -1043,7 +1310,7 @@ const locale = window.locale;
     const task = await getCurrentTask();
     if (!task) throw new Error("No current task");
     return await nextTaskStep(stepName, task);
-  }
+  };
 
   //
   //LIB
@@ -1074,6 +1341,30 @@ const locale = window.locale;
               // @ts-ignore because all html elements inherit from HTMLElement anyways
               .then(resolve)
               .catch(reject),
+          checkInterval
+        );
+      } else {
+        resolve(res);
+      }
+    });
+  }
+
+  /**
+   * @template T
+   * @param {()=>((T | undefined) | Promise<T | undefined>)} getter
+   * @return {Promise<T | undefined>}
+   */
+  async function waitForValue(getter, checkInterval = 100, maxChecks = 50) {
+    const res = await getter();
+    return new Promise((resolve) => {
+      if (res === undefined) {
+        if (maxChecks <= 0) {
+          resolve(undefined);
+          return;
+        }
+        setTimeout(
+          () =>
+            waitForValue(getter, checkInterval, maxChecks - 1).then(resolve),
           checkInterval
         );
       } else {
@@ -1156,11 +1447,9 @@ const locale = window.locale;
    * @param {string} [exclude]
    */
   function urlCheck(url, exclude) {
-    if (typeof url === "string")
-      url = [url];
-    if (exclude && window.location.href.includes(exclude))
-      return false;
-    return url.some(u => window.location.href.includes(u));
+    if (typeof url === "string") url = [url];
+    if (exclude && window.location.href.includes(exclude)) return false;
+    return url.some((u) => window.location.href.includes(u));
   }
 
   /**
@@ -1194,10 +1483,8 @@ const locale = window.locale;
         Object.assign(el[name], val);
       } else if (name === "style") {
         Object.entries(val).forEach(([k, v]) => {
-          if (el.style[k] !== undefined)
-            el.style[k] = v;
-          else
-            el.style.setProperty(k, v)
+          if (el.style[k] !== undefined) el.style[k] = v;
+          else el.style.setProperty(k, v);
         });
       } else if (name === "bindTo") {
         val.current = el;
@@ -1205,11 +1492,8 @@ const locale = window.locale;
         el[name] = val;
       }
     });
-    children.forEach((child) =>
-      el.appendChild(
-        child instanceof Element ? child : document.createTextNode(child)
-      )
-    );
+
+    el.append(...children);
 
     return el;
   }
