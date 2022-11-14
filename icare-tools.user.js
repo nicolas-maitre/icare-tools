@@ -1222,14 +1222,11 @@ const locale = window.locale;
         return;
       }
       case "success": {
-        console.info(
-          "CONTRATS INTROUVABLES:",
-          task.sharedData.contractsNotFound
-        );
-        console.info(
-          "CONTRATS MULTIPLES:",
-          task.sharedData.contractsDuplicates
-        );
+        console.info("CONTRATS INTROUVABLES:");
+        console.table(task.sharedData.contractsNotFound);
+        console.info("CONTRATS MULTIPLES:");
+        console.table(task.sharedData.contractsDuplicates);
+
         //store end time
         const endedAt = Date.now();
         task = await setCurrentTask({ ...task, endedAt });
@@ -1265,6 +1262,7 @@ const locale = window.locale;
         //display end of task infos
         alert(
           `Tâche terminée! (en ${elapsedTimeString}) \n` +
+            `[F12] Listes complêtes affichées dans la console\n` +
             `${contractsNotFoundEntries.length} contrats pas trouvés sur ${
               Object.keys(task.sharedData.contracts).length
             }.\n` +
