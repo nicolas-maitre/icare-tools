@@ -107,7 +107,8 @@ const locale = window.locale;
         createElem("h2", null, "Outils"),
         createElem("button", { onclick: hideWindow }, "X")
       ),
-      WindowFillContractsClassesSection()
+      WindowFillContractsClassesSection(),
+      WindowApplyPercentFacturation()
       // WindowTestSection(),
     );
   }
@@ -420,6 +421,49 @@ const locale = window.locale;
     }
   }
 
+  function WindowApplyPercentFacturation() {
+    return createElem(
+      "p",
+      null,
+      createElem("h3", null, "Deduction FAJE 20%"),
+      createElem(
+        "form",
+        {
+          onsubmit: onSubmit,
+          style: {
+            borderLeft: "3px solid gray",
+            paddingLeft: "10px",
+            display: "flex",
+            flexFlow: "column",
+            alignItems: "flex-start",
+            gap: "10px",
+          },
+        },
+        "Lancez la procédure depuis la liste des journaux de facturation",
+        createElem("button", { type: "submit" }, "Démarrer")
+      )
+    );
+
+    /**
+     * @param {SubmitEvent} evt
+     */
+    function onSubmit(evt) {
+      evt.preventDefault();
+      hideWindow();
+      /** @type {ApplyPercentFacturationSharedData} */
+      const newTask = {
+        factures: {},
+        idsToHandle: [],
+      };
+      setNewTask(
+        "applyPercentFacturation",
+        newTask,
+        undefined,
+        "Ajoute un entrée de rabais à une liste de factures."
+      );
+    }
+  }
+
   function WindowTestSection() {
     return createElem(
       "p",
@@ -429,7 +473,7 @@ const locale = window.locale;
         "button",
         {
           async onclick() {
-            await setNewTask("test", "Hello there", "Says hello");
+            await setNewTask("test", "Hello there", undefined, "Says hello");
           },
         },
         "Démarrer"
@@ -616,10 +660,16 @@ const locale = window.locale;
     ],
   };
 
+  /** @type {TaskParams} */
+  const applyPercentFacturationTaskParams = {
+    taskFn: applyPercentFacturationTaskFn,
+  };
+
   const taskMap = {
     /** @type {TaskParams} */
     test: { taskFn: testTask },
     fillContractClasses: fillContractClassesTaskParams,
+    applyPercentFacturation: applyPercentFacturationTaskParams,
   };
 
   async function handleTasks() {
@@ -1291,6 +1341,238 @@ const locale = window.locale;
   }
 
   /**
+   * @typedef {{
+   *    id: string;
+   *    text: string;
+   *    compteDeb: string;
+   *    ctrCostDeb: string;
+   *    compteCred: string;
+   *    ctrCostCred: string;
+   *    priceAsCents: number;
+   * }} Order
+   *
+   * @typedef {{
+   *    id: string,
+   *    href: string,
+   *    orders?: Order[],
+   * }} Facture
+   *
+   * @typedef {{
+   *    factures: {
+   *      [id:string]: Facture,
+   *    };
+   *    idsToHandle:string[];
+   * }} ApplyPercentFacturationSharedData
+   *
+   * @typedef {Omit<Task, "sharedData"> & {
+   *      sharedData: ApplyPercentFacturationSharedData
+   * }} ApplyPercentFacturationTask
+   *
+   * @param {ApplyPercentFacturationTask} task
+   */
+  async function applyPercentFacturationTaskFn(task) {
+    if (locale && locale.substring(0, 2) !== "fr") {
+      alert(
+        "Cette tâche supporte uniquement le site en français.\n" +
+          "Changez la langue et continuez la tâche"
+      );
+      throw new Error("Cette tâche supporte uniquement le site en français.");
+    }
+
+    const factureId = task.sharedData.idsToHandle[0];
+    const currentFacture = task.sharedData.factures[factureId];
+
+    switch (task.stepName) {
+      case "start": {
+        if (!urlCheck("/icare/Ad/FjEdit.do")) {
+          alert(
+            "Mauvaise page de départ, naviguez sur la liste des facturation puis continuez la tâche"
+          );
+          throw new Warning("Mauvaise page de départ.");
+        }
+
+        //get factures from list
+        /** @type {HTMLTableRowElement[]} */
+        // @ts-ignore
+        const TRs = [
+          ...document.querySelectorAll("#jqFjDisplayTable > tbody > tr"),
+        ];
+
+        const factures = Object.fromEntries(
+          TRs.map((tr) => {
+            const cells = tr.querySelectorAll("td");
+            /** @type {HTMLAnchorElement | null} */
+            const numberLink = cells[1].querySelector("a");
+            if (!numberLink) throw new Error("Imposteur de lien...");
+            const id = numberLink.textContent?.trim() ?? "";
+            const href = numberLink.href;
+            /** @type {Facture} */
+            const facture = { id, href };
+            return [id, facture];
+          })
+        );
+
+        const idsToHandle = Object.keys(factures);
+
+        /** @type {ApplyPercentFacturationTask} */
+        const newTask = {
+          ...task,
+          sharedData: {
+            factures,
+            idsToHandle,
+          },
+        };
+
+        nextTaskStep("startOfLoop", newTask);
+
+        return;
+      }
+
+      case "startOfLoop": {
+        if (task.sharedData.idsToHandle.length === 0) {
+          nextTaskStep("success", task);
+          return;
+        }
+
+        const facturesCount = Object.keys(task.sharedData.factures).length;
+        const currentIndex =
+          facturesCount - task.sharedData.idsToHandle.length + 1;
+
+        /** @type {ApplyPercentFacturationTask} */
+        const taskWithMessage = {
+          ...task,
+          lastMessage: `Info: Facture courante: ${factureId} (${currentIndex}/${facturesCount})`,
+        };
+
+        nextTaskStep("collectOrders", taskWithMessage);
+        return;
+      }
+
+      case "collectOrders": {
+        if (!urlCheckOrGo(currentFacture.href)) {
+          return;
+        }
+
+        const tbody = document.querySelector("#fakPosTable > tbody");
+        const rows = [
+          ...(tbody?.querySelectorAll("tr[class=even], tr[class=odd]") ?? []),
+        ];
+        const orders = rows.map((row) => {
+          const TDs = row.querySelectorAll("td[valign]");
+          /** @type {HTMLInputElement | null} */
+          const orderIdInput = TDs[0].querySelector(
+            "form[name=FakturaPositionEditForm] > input.input[name=fpReihenfolge]"
+          );
+          /** @type {HTMLTextAreaElement | null} */
+          const textInput = TDs[1].querySelector("textarea[name=fpText]");
+          /** @type {HTMLTextAreaElement | null} */
+          const compteDebInput = TDs[2].querySelector("textarea[name=fpKonto]");
+          /** @type {HTMLTextAreaElement | null} */
+          const ctrCostDebInput = TDs[3].querySelector(
+            "textarea[name=fpKostSt]"
+          );
+          /** @type {HTMLTextAreaElement | null} */
+          const compteCredInput = TDs[4].querySelector(
+            "textarea[name=fpKontoHaben]"
+          );
+          /** @type {HTMLTextAreaElement | null} */
+          const ctrCostCredInput = TDs[5].querySelector(
+            "textarea[name=fpKostStHaben]"
+          );
+          /** @type {HTMLInputElement | null} */
+          const priceInput = TDs[9].querySelector("input[name=fpPreis]");
+
+          namedLog({
+            orderIdInput,
+            textInput,
+            compteDebInput,
+            ctrCostDebInput,
+            compteCredInput,
+            ctrCostCredInput,
+            priceInput,
+          });
+
+          if (
+            !orderIdInput ||
+            !textInput ||
+            !compteDebInput ||
+            !ctrCostDebInput ||
+            !compteCredInput ||
+            !ctrCostCredInput ||
+            !priceInput
+          ) {
+            throw new Error("Valeurs introuvables");
+          }
+
+          const priceAsCents = Math.round(parseFloat(priceInput.value) * 100);
+          if (isNaN(priceAsCents)) throw new Error("invalid price");
+
+          const order = {
+            id: orderIdInput.value,
+            text: textInput.value,
+            compteDeb: compteDebInput.value,
+            ctrCostDeb: ctrCostDebInput.value,
+            compteCred: compteCredInput.value,
+            ctrCostCred: ctrCostCredInput.value,
+            priceAsCents,
+          };
+
+          return order;
+        });
+
+        /** @type {ApplyPercentFacturationTask} */
+        const newTask = {
+          ...task,
+          sharedData: {
+            ...task.sharedData,
+            factures: {
+              ...task.sharedData.factures,
+              [factureId]: {
+                ...currentFacture,
+                orders,
+              },
+            },
+          },
+        };
+
+        nextTaskStep("endOfLoop", newTask);
+
+        return;
+      }
+
+      case "endOfLoop": {
+        /** @type {ApplyPercentFacturationTask} */
+        const newTask = {
+          ...task,
+          sharedData: {
+            ...task.sharedData,
+            idsToHandle: task.sharedData.idsToHandle.slice(1),
+          },
+        };
+
+        nextTaskStep("startOfLoop", newTask);
+
+        return;
+      }
+
+      case "success": {
+        alert("Terminé!");
+        const allOrders = Object.fromEntries(
+          Object.entries(task.sharedData.factures).flatMap(([facId, fac]) =>
+            (fac.orders ?? []).map((or) => [or.id, or])
+          )
+        );
+        console.table(allOrders);
+        console.log("done", task.sharedData);
+
+        removeCurrentTask();
+
+        return;
+      }
+    }
+  }
+
+  /**
    * @param {FillContractClasseTask} task
    * @param {string} name
    * @param {string | undefined} value
@@ -1488,7 +1770,7 @@ const locale = window.locale;
   /**
    * @param {keyof typeof taskMap} name
    * @param {any} sharedData
-   * @param {any} heavyData
+   * @param {any} [heavyData]
    * @param {string} [description]
    */
   async function setNewTask(name, sharedData, heavyData, description) {
