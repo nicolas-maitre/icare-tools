@@ -15,6 +15,9 @@
 
 //use violentmonkey for custom editor
 
+// const STEP_BY_STEP = true;
+const STEP_BY_STEP = false;
+
 /** @type {import("xlsx")} */
 // @ts-ignore ts doesn't know it exists
 const XLSX = window.XLSX;
@@ -62,7 +65,8 @@ const locale = window.locale;
         top: "0",
         left: "0",
         minWidth: "100vw",
-        minHeight: "100vh",
+        height: "100vh",
+        overflowY: "auto",
         backgroundColor: "#000a",
         zIndex: "1",
       },
@@ -83,7 +87,7 @@ const locale = window.locale;
           display: "inline-block",
           visibility: "hidden",
           position: "relative",
-          top: "50px",
+          margin: "50px",
           left: "calc(50vw - calc(var(--width) / 2))",
           width: "var(--width)",
           minHeight: "200px",
@@ -454,6 +458,7 @@ const locale = window.locale;
       const newTask = {
         factures: {},
         idsToHandle: [],
+        text: "Déduction FAJE 20%",
       };
       setNewTask(
         "applyPercentFacturation",
@@ -588,7 +593,7 @@ const locale = window.locale;
         task.name +
         "\n" +
         "Description: " +
-        task.description +
+        (task.description ?? "(no description)") +
         "\n" +
         "Démarré le: " +
         new Date(task.startedAt).toLocaleString() +
@@ -1342,7 +1347,7 @@ const locale = window.locale;
 
   /**
    * @typedef {{
-   *    id: string;
+   *    number: number;
    *    text: string;
    *    compteDeb: string;
    *    ctrCostDeb: string;
@@ -1355,6 +1360,8 @@ const locale = window.locale;
    *    id: string,
    *    href: string,
    *    orders?: Order[],
+   *    newOrders?: Order[],
+   *    newOrderIndex?: number,
    * }} Facture
    *
    * @typedef {{
@@ -1362,6 +1369,7 @@ const locale = window.locale;
    *      [id:string]: Facture,
    *    };
    *    idsToHandle:string[];
+   *    text: string;
    * }} ApplyPercentFacturationSharedData
    *
    * @typedef {Omit<Task, "sharedData"> & {
@@ -1418,6 +1426,7 @@ const locale = window.locale;
         const newTask = {
           ...task,
           sharedData: {
+            ...task.sharedData,
             factures,
             idsToHandle,
           },
@@ -1458,65 +1467,49 @@ const locale = window.locale;
           ...(tbody?.querySelectorAll("tr[class=even], tr[class=odd]") ?? []),
         ];
         const orders = rows.map((row) => {
-          const TDs = row.querySelectorAll("td[valign]");
-          /** @type {HTMLInputElement | null} */
-          const orderIdInput = TDs[0].querySelector(
-            "form[name=FakturaPositionEditForm] > input.input[name=fpReihenfolge]"
-          );
-          /** @type {HTMLTextAreaElement | null} */
-          const textInput = TDs[1].querySelector("textarea[name=fpText]");
-          /** @type {HTMLTextAreaElement | null} */
-          const compteDebInput = TDs[2].querySelector("textarea[name=fpKonto]");
-          /** @type {HTMLTextAreaElement | null} */
-          const ctrCostDebInput = TDs[3].querySelector(
-            "textarea[name=fpKostSt]"
-          );
-          /** @type {HTMLTextAreaElement | null} */
-          const compteCredInput = TDs[4].querySelector(
-            "textarea[name=fpKontoHaben]"
-          );
-          /** @type {HTMLTextAreaElement | null} */
-          const ctrCostCredInput = TDs[5].querySelector(
-            "textarea[name=fpKostStHaben]"
-          );
-          /** @type {HTMLInputElement | null} */
-          const priceInput = TDs[9].querySelector("input[name=fpPreis]");
+          const inputs = getFacInputs(row);
 
-          namedLog({
-            orderIdInput,
-            textInput,
-            compteDebInput,
-            ctrCostDebInput,
-            compteCredInput,
-            ctrCostCredInput,
-            priceInput,
-          });
-
-          if (
-            !orderIdInput ||
-            !textInput ||
-            !compteDebInput ||
-            !ctrCostDebInput ||
-            !compteCredInput ||
-            !ctrCostCredInput ||
-            !priceInput
-          ) {
-            throw new Error("Valeurs introuvables");
-          }
-
-          const priceAsCents = Math.round(parseFloat(priceInput.value) * 100);
+          const priceAsCents = Math.round(parseFloat(inputs.price.value) * 100);
           if (isNaN(priceAsCents)) throw new Error("invalid price");
 
+          const orderNumber = parseInt(inputs.orderId.value);
+          if (isNaN(orderNumber))
+            throw new Error(
+              "order number is not a number " + inputs.orderId.value
+            );
+
           const order = {
-            id: orderIdInput.value,
-            text: textInput.value,
-            compteDeb: compteDebInput.value,
-            ctrCostDeb: ctrCostDebInput.value,
-            compteCred: compteCredInput.value,
-            ctrCostCred: ctrCostCredInput.value,
+            number: orderNumber,
+            text: inputs.text.value,
+            compteDeb: inputs.compteDeb.value,
+            ctrCostDeb: inputs.ctrCostDeb.value,
+            compteCred: inputs.compteCred.value,
+            ctrCostCred: inputs.ctrCostCred.value,
             priceAsCents,
           };
 
+          return order;
+        });
+
+        //TODO: use a real algorythm here
+        const groupsOfOrders = [orders];
+        const newOrders = groupsOfOrders.map((orderGroup) => {
+          const lastOrder = orderGroup.at(-1);
+          if (!lastOrder) throw new Error("missing order");
+
+          const sumAsCents = orderGroup.reduce((s, o) => s + o.priceAsCents, 0);
+          const priceWithPercentAsCents = sumAsCents * 0.2; //APPLY 20%
+
+          /** @type {Order} */
+          const order = {
+            number: lastOrder.number + 1,
+            text: task.sharedData.text,
+            compteDeb: lastOrder.compteDeb,
+            ctrCostDeb: lastOrder.ctrCostDeb,
+            compteCred: lastOrder.compteCred,
+            ctrCostCred: lastOrder.ctrCostCred,
+            priceAsCents: priceWithPercentAsCents,
+          };
           return order;
         });
 
@@ -1530,13 +1523,83 @@ const locale = window.locale;
               [factureId]: {
                 ...currentFacture,
                 orders,
+                newOrders: newOrders,
+                newOrderIndex: 0,
               },
             },
           },
         };
 
-        nextTaskStep("endOfLoop", newTask);
+        // nextTaskStep("newOrder_startOfLoop", newTask);
+        nextTaskStep("dummyStep", newTask); //TODO: ignore creation for now
 
+        return;
+      }
+
+      case "newOrder_startOfLoop": {
+        if (
+          (currentFacture.newOrderIndex ?? Infinity) >=
+          (currentFacture.newOrders?.length ?? 0)
+        ) {
+          nextTaskStep("dummyStep", task);
+          return;
+        }
+        nextTaskStep("newOrder_fillOrder", task);
+        return;
+      }
+
+      case "newOrder_fillOrder": {
+        const orderToFill =
+          currentFacture.newOrders?.[currentFacture.newOrderIndex ?? Infinity];
+        if (!orderToFill) throw new Error("no order to fill");
+        const table = [...document.querySelectorAll("#fakPosTable")].at(-1);
+        if (!table) throw new Error("table not found");
+
+        const inputs = getFacInputs(table);
+
+        inputs.orderId.value = orderToFill.number.toString();
+        inputs.text.value = orderToFill.text;
+        inputs.compteDeb.value = orderToFill.compteDeb;
+        inputs.ctrCostDeb.value = orderToFill.ctrCostDeb;
+        inputs.compteCred.value = orderToFill.compteCred;
+        inputs.ctrCostCred.value = orderToFill.ctrCostCred;
+        inputs.price.value = (orderToFill.priceAsCents / 100).toString();
+
+        /** @type {HTMLButtonElement | null} */
+        const submitButton = document.querySelector(
+          "div.col > div > button[type=button][onclick].btn-success"
+        );
+        if (!submitButton) throw new Error("no submit button");
+        submitButton.click();
+
+        //TODO: instant execution may cause problems with saving.
+        nextTaskStep("newOrder_endOfLoop", task);
+        return;
+      }
+
+      case "newOrder_endOfLoop": {
+        /** @type {ApplyPercentFacturationTask} */
+        const newTask = {
+          ...task,
+          sharedData: {
+            ...task.sharedData,
+            factures: {
+              ...task.sharedData.factures,
+              [factureId]: {
+                ...task.sharedData.factures[factureId],
+                newOrderIndex:
+                  (task.sharedData.factures[factureId].newOrderIndex ?? 0) + 1,
+              },
+            },
+          },
+        };
+
+        nextTaskStep("newOrder_startOfLoop", newTask);
+        return;
+      }
+
+      case "dummyStep": {
+        nextTaskStep("endOfLoop", task);
         return;
       }
 
@@ -1559,7 +1622,7 @@ const locale = window.locale;
         alert("Terminé!");
         const allOrders = Object.fromEntries(
           Object.entries(task.sharedData.factures).flatMap(([facId, fac]) =>
-            (fac.orders ?? []).map((or) => [or.id, or])
+            (fac.orders ?? []).map((or) => [or.number, or])
           )
         );
         console.table(allOrders);
@@ -1570,6 +1633,51 @@ const locale = window.locale;
         return;
       }
     }
+  }
+
+  /**
+   * @param {Element} parent
+   */
+  function getFacInputs(parent) {
+    const TDs = parent.querySelectorAll("td[valign]");
+    /** @type {HTMLInputElement | null} */
+    const orderId = TDs[0].querySelector(
+      "form[name=FakturaPositionEditForm] > input.input[name=fpReihenfolge]"
+    );
+    /** @type {HTMLTextAreaElement | null} */
+    const text = TDs[1].querySelector("textarea[name=fpText]");
+    /** @type {HTMLTextAreaElement | null} */
+    const compteDeb = TDs[2].querySelector("textarea[name=fpKonto]");
+    /** @type {HTMLTextAreaElement | null} */
+    const ctrCostDeb = TDs[3].querySelector("textarea[name=fpKostSt]");
+    /** @type {HTMLTextAreaElement | null} */
+    const compteCred = TDs[4].querySelector("textarea[name=fpKontoHaben]");
+    /** @type {HTMLTextAreaElement | null} */
+    const ctrCostCred = TDs[5].querySelector("textarea[name=fpKostStHaben]");
+    /** @type {HTMLInputElement | null} */
+    const price = TDs[9].querySelector("input[name=fpPreis]");
+
+    if (
+      !orderId ||
+      !text ||
+      !compteDeb ||
+      !ctrCostDeb ||
+      !compteCred ||
+      !ctrCostCred ||
+      !price
+    ) {
+      throw new Error("Valeurs introuvables");
+    }
+
+    return {
+      orderId,
+      text,
+      compteDeb,
+      ctrCostDeb,
+      compteCred,
+      ctrCostCred,
+      price,
+    };
   }
 
   /**
@@ -1807,7 +1915,12 @@ const locale = window.locale;
     //         throw new Error("no task provided");
     // }
     task = { ...task, stepName, stepStartedAt: Date.now() };
+
+    if (STEP_BY_STEP)
+      task = { ...task, isPaused: true, lastMessage: "Step by step..." };
+
     task = await setCurrentTask(task);
+
     if (!willReloadPage) handleTasks();
 
     return task;
