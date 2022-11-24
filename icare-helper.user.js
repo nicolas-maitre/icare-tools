@@ -18,12 +18,10 @@ window.HAS_ICARE_HELPERS_LOADED = true;
 
 const AUTO_PERSON = true;
 // const AUTO_PERSON = false;
-
 const AUTO_CONTRACT = true;
 // const AUTO_CONTRACT = false;
-
-// const AUTO_TAB = true;
-const AUTO_TAB = false;
+const AUTO_TAB = true;
+// const AUTO_TAB = false;
 (() => {
   console.info("Icare helper init");
 
@@ -32,7 +30,16 @@ const AUTO_TAB = false;
   style.setAttribute("type", "text/css");
   document.head.appendChild(style);
   style.textContent = `tr.highlightedRow { background-color: yellowgreen!important; }
-      .ui-widget-overlay.ui-front, [aria-describedby=ajaxErrorDialog] {display: none;}`;
+      .ui-widget-overlay.ui-front {display: none;}
+      [aria-describedby="ajaxErrorDialog"] {
+        right: -186px;
+        bottom: -72px;
+        top: auto !important;
+        left: auto !important;
+        transform: scale(.5);
+        opacity: .8;
+      }
+      `;
 
   //FIND PERSON PAGE
   if (window.location.href.includes("PersonenList.do")) {
@@ -62,7 +69,7 @@ const AUTO_TAB = false;
   //CREATE CONTRACT PAGE
   if (window.location.href.includes("WartelisteToPlatzierungOpen")) {
     //date
-    document.querySelector("#dateBeginn").value = "22.08.2022";
+    document.querySelector("#dateBeginn").value = "01.11.2022";
   }
 
   //PERSON PAGE
