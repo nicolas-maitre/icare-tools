@@ -4,6 +4,7 @@
 // @version  1
 //
 // @namespace   Violentmonkey Scripts
+// @match       https://icare-vali.lausanne.ch/icare/*
 // @match       https://icare.lausanne.ch/icare/*
 // @grant       none
 // @version     1.0
@@ -18,8 +19,8 @@ window.HAS_ICARE_HELPERS_LOADED = true;
 
 const AUTO_PERSON = true;
 // const AUTO_PERSON = false;
-const AUTO_CONTRACT = true;
-// const AUTO_CONTRACT = false;
+// const AUTO_CONTRACT = true;
+const AUTO_CONTRACT = false;
 const AUTO_TAB = true;
 // const AUTO_TAB = false;
 (() => {
@@ -43,6 +44,15 @@ const AUTO_TAB = true;
 
   //FIND PERSON PAGE
   if (window.location.href.includes("PersonenList.do")) {
+    //reset
+    if (new URLSearchParams(document.location.search).get("reset") === "true") {
+      /** @type {HTMLButtonElement | null} */
+      const resetBtn = document.querySelector(
+        "#filterForm button.btn-danger[onclick]"
+      );
+      resetBtn?.click();
+    }
+
     /** @type {HTMLInputElement | null} */
 
     // const elem = document.querySelector("#personentyp[name=perId]"); //id input
@@ -52,7 +62,7 @@ const AUTO_TAB = true;
 
     // 	const elem = document.querySelector("#perEinwohner[name=perEinwohner]") //chnum input
 
-    // 	const elem = document.querySelector("#name[name=name]") //name input
+    // const elem = document.querySelector("#name[name=name]") //name input
 
     elem.focus();
     elem.select();
@@ -69,7 +79,8 @@ const AUTO_TAB = true;
   //CREATE CONTRACT PAGE
   if (window.location.href.includes("WartelisteToPlatzierungOpen")) {
     //date
-    document.querySelector("#dateBeginn").value = "01.11.2022";
+    // document.querySelector("#dateBeginn").value = "01.11.2022";
+    document.querySelector("#dateBeginn").value = "22.08.2022";
   }
 
   //PERSON PAGE
@@ -170,11 +181,11 @@ const AUTO_TAB = true;
     if (AUTO_TAB) {
       (async () => {
         /** @type {HTMLAnchorElement} */
-        // const tabLink = await waitForSelector("ul > li[role=tab] > a#ui-id-11", 250);
         const tabLink = await waitForSelector(
-          "ul > li[role=tab] > a#ui-id-7",
+          "ul > li[role=tab] > a#ui-id-11",
           250
-        );
+        ); // print
+        // const tabLink = await waitForSelector("ul > li[role=tab] > a#ui-id-7", 250); // prestations
         tabLink?.click();
       })();
     }
