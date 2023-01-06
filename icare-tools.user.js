@@ -486,6 +486,32 @@ const locale = window.locale;
     );
   }
 
+  //add contract button to person page
+  if (urlCheck("/icare/Be/PersonEdit.do")) {
+    const h2 = document.querySelector("#data h2");
+    const personIdForButton = Number(
+      h2?.textContent?.split("(").at(1)?.split(")").at(0)
+    );
+    if (h2 && !isNaN(personIdForButton)) {
+      e(h2).addElem(
+        "button",
+        {
+          type: "button",
+          title: "Afficher les contrats",
+          onclick(evt) {
+            setNewTask("goToContracts", { personId: personIdForButton });
+          },
+          style: {
+            borderRadius: "1em",
+            lineHeight: "1em",
+            paddingBottom: ".2em",
+          },
+        },
+        "c"
+      );
+    }
+  }
+
   /** @type {BindRef<HTMLParagraphElement>} */
   const taskWindowInfos = {};
   /** @type {BindRef<HTMLButtonElement>} */
@@ -670,11 +696,17 @@ const locale = window.locale;
     taskFn: applyPercentFacturationTaskFn,
   };
 
+  /** @type {TaskParams} */
+  const goToContractsTaskParams = {
+    taskFn: goToContractsTaskFn,
+  };
+
   const taskMap = {
     /** @type {TaskParams} */
     test: { taskFn: testTask },
     fillContractClasses: fillContractClassesTaskParams,
     applyPercentFacturation: applyPercentFacturationTaskParams,
+    goToContracts: goToContractsTaskParams,
   };
 
   async function handleTasks() {
@@ -1636,6 +1668,54 @@ const locale = window.locale;
   }
 
   /**
+   * @typedef {Omit<Task, "sharedData"> & {
+   *  sharedData:{
+   *    personId: number,
+   *  }
+   * }} GoToContractsTask
+   * @param {GoToContractsTask} task
+   */
+  async function goToContractsTaskFn(task) {
+    switch (task.stepName) {
+      case "start": {
+        if (
+          !urlCheckOrGo(
+            "/icare/Be/VertragList.do?suchen=firstSearch&reset=true"
+          )
+        ) {
+          return;
+        }
+
+        /** @type {HTMLFormElement | null} */
+        const contractForm = document.querySelector(
+          "form[name=VertragListeForm]"
+        );
+        if (!contractForm) return;
+
+        /** @type {HTMLInputElement | null} */
+        const contractIdInput = contractForm.querySelector("input[name=verNr]");
+        if (!contractIdInput) return;
+
+        contractIdInput.value = task.sharedData.personId.toString();
+
+        await nextTaskStep("success", task, true);
+
+        contractForm.submit();
+
+        return;
+      }
+
+      case "success": {
+        console.info("go to contracts task success");
+
+        await removeCurrentTask();
+
+        return;
+      }
+    }
+  }
+
+  /**
    * @param {Element} parent
    */
   function getFacInputs(parent) {
@@ -1903,10 +1983,17 @@ const locale = window.locale;
     handleTasks();
     return task;
   }
+  // @ts-ignore that's the goal
+  window.icareTools = {
+    // @ts-ignore
+    ...window.icareTools,
+    setNewTask,
+  };
 
   /**
    * @param {string} stepName
    * @param {Task} task
+   * @param {boolean} [willReloadPage=false] indicates if the caller will reload the page
    */
   async function nextTaskStep(stepName, task, willReloadPage = false) {
     // if (!task) {
