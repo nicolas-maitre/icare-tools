@@ -21,8 +21,8 @@ const AUTO_PERSON = true;
 // const AUTO_PERSON = false;
 // const AUTO_CONTRACT = true;
 const AUTO_CONTRACT = false;
-const AUTO_TAB = true;
-// const AUTO_TAB = false;
+const AUTO_TAB = "prestations";
+// const AUTO_TAB = "imprimer";
 (() => {
   console.info("Icare helper init");
 
@@ -178,14 +178,30 @@ const AUTO_TAB = true;
   }
 
   if (window.location.href.includes("VertragEdit.do")) {
+    //skip confirmation
+    (() => {
+      /** @type {HTMLInputElement | null} */
+      const confirmBox = document.querySelector("#trotzdem");
+      if (confirmBox) {
+        confirmBox.checked = true;
+        confirmBox.form?.submit();
+      }
+    })();
+
     if (AUTO_TAB) {
       (async () => {
+        const tab_id =
+          AUTO_TAB === "prestations"
+            ? 7
+            : AUTO_TAB === "imprimer"
+            ? 11
+            : undefined;
+        if (tab_id === undefined) return;
         /** @type {HTMLAnchorElement} */
         const tabLink = await waitForSelector(
-          "ul > li[role=tab] > a#ui-id-11",
+          `ul > li[role=tab] > a#ui-id-${tab_id}`,
           250
-        ); // print
-        // const tabLink = await waitForSelector("ul > li[role=tab] > a#ui-id-7", 250); // prestations
+        );
         tabLink?.click();
       })();
     }
