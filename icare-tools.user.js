@@ -112,7 +112,8 @@ const locale = window.locale;
         createElem("button", { onclick: hideWindow }, "X")
       ),
       WindowFillContractsClassesSection(),
-      WindowApplyPercentFacturation()
+      WindowApplyPercentFacturation(),
+      WindowAddOtherPrestSection()
       // WindowTestSection(),
     );
   }
@@ -122,6 +123,156 @@ const locale = window.locale;
     const submitButtonRef = {};
     /** @type {BindRef<HTMLFormElement>} */
     const formRef = {};
+
+    /**
+     * @param {SubmitEvent} evt
+     */
+    async function onSubmit(evt) {
+      evt.preventDefault();
+
+      if (!submitButtonRef.current || !formRef.current) {
+        alert("erreur d'initialisation");
+        return;
+      }
+
+      /**
+       * @typedef {{
+       *    allStudents: File,
+       *    wrongContracts: File,
+       *    autoUseFirstDuplicateData?: "on",
+       *    autoSkipNotFound?: "on",
+       *    autoSelectLastContract?: "on",
+       *    existingDataStrat: ExistingDataStrategy,
+       * }} FormEntries
+       * @type {FormEntries} */
+      // @ts-ignore We know what's in the form
+      const formData = Object.fromEntries(
+        new FormData(formRef.current).entries()
+      );
+
+      if (!formData.allStudents || !formData.wrongContracts) {
+        alert("Merci de déposer tous les fichiers");
+        return;
+      }
+
+      submitButtonRef.current.disabled = true;
+
+      const [allPeopleBuffer, wrongContractsBuffer] = await Promise.all([
+        formData.allStudents.arrayBuffer(),
+        formData.wrongContracts.arrayBuffer(),
+      ]);
+
+      const allPeopleWorkbook = XLSX.read(allPeopleBuffer);
+      let selectedAllPeopleSheet = 0;
+      if (allPeopleWorkbook.SheetNames.length > 1) {
+        const promptRes = promptIndex(
+          "Tableur agapeo: Sélectionnez la feuille de données",
+          allPeopleWorkbook.SheetNames,
+          0,
+          true
+        );
+        if (promptRes === null) {
+          submitButtonRef.current.disabled = false;
+          return;
+        }
+        selectedAllPeopleSheet = promptRes;
+      }
+      const allPeopleSheet =
+        allPeopleWorkbook.Sheets[
+          allPeopleWorkbook.SheetNames[selectedAllPeopleSheet]
+        ];
+      /** @type {FillContractsClassePerson[]} */
+      const allPeopleJSON = XLSX.utils.sheet_to_json(allPeopleSheet);
+      if (
+        !Array.isArray(allPeopleJSON) ||
+        !objectContainsKeys(allPeopleJSON[0], [
+          "Nom",
+          "Prenom",
+          "DateNaissance",
+        ])
+      ) {
+        submitButtonRef.current.disabled = false;
+        alert("Le fichier d'élèves est vide ou corrompu. Veuillez réessayer.");
+        console.error(allPeopleJSON[0]);
+        return;
+      }
+      namedLog({ allPeopleJSON });
+
+      const wrongContractsWorkbook = XLSX.read(wrongContractsBuffer);
+
+      let selectedWrongContractsSheet = 0;
+      if (wrongContractsWorkbook.SheetNames.length > 1) {
+        const promptRes = promptIndex(
+          "Tableur des contrats incomplêts: Sélectionnez la feuille de données",
+          wrongContractsWorkbook.SheetNames,
+          0,
+          true
+        );
+        if (promptRes === null) {
+          submitButtonRef.current.disabled = false;
+          return;
+        }
+        selectedWrongContractsSheet = promptRes;
+      }
+      const wrongContractsSheet =
+        wrongContractsWorkbook.Sheets[
+          wrongContractsWorkbook.SheetNames[selectedWrongContractsSheet]
+        ];
+
+      /** @type {FillContractsClasseContract[]} */
+      const wrongContractsJSON = XLSX.utils.sheet_to_json(wrongContractsSheet);
+      if (
+        !Array.isArray(wrongContractsJSON) ||
+        !objectContainsKeys(wrongContractsJSON[0], [
+          "e id",
+          "e nom",
+          "e prenom",
+          "institution",
+          "institution id",
+        ])
+      ) {
+        submitButtonRef.current.disabled = false;
+        alert(
+          "Le fichier de contrats est vide ou corrompu. Veuillez réessayer."
+        );
+        return;
+      }
+
+      namedLog({ wrongContractsJSON });
+
+      const contractsById = Object.fromEntries(
+        wrongContractsJSON.map((wc) => [wc["e id"], wc])
+      );
+
+      const contractsIdsToHandle = Object.keys(contractsById).sort(
+        (a, b) => parseInt(a) - parseInt(b)
+      );
+      // .slice(127); //TODO: debug
+
+      /** @type {FillContractClassesSharedData} */
+      const taskData = {
+        contracts: contractsById,
+        contractsIds: contractsIdsToHandle,
+        existingDataStrategy: formData.existingDataStrat,
+        shouldSelectFirstData: formData.autoUseFirstDuplicateData === "on",
+        shouldSkipContractNotFound: formData.autoSkipNotFound === "on",
+        shouldSelectLastContractNotFound:
+          formData.autoSelectLastContract === "on",
+        contractsNotFound: {},
+        contractsDuplicates: {},
+        contractByContractMode: false,
+      };
+
+      setNewTask(
+        "fillContractClasses",
+        taskData,
+        allPeopleJSON,
+        "Remplissage des contrats sans classe."
+      );
+
+      hideWindow();
+      submitButtonRef.current.disabled = false;
+    }
 
     return createElem(
       "p",
@@ -271,158 +422,6 @@ const locale = window.locale;
         )
       )
     );
-
-    /**
-     * @param {SubmitEvent} evt
-     */
-    async function onSubmit(evt) {
-      evt.preventDefault();
-      //type checking
-      if (!submitButtonRef.current || !formRef.current) {
-        alert("erreur d'initialisation");
-        return;
-      }
-
-      /**
-       * @typedef {{
-       *    allStudents: File,
-       *    wrongContracts: File,
-       *    autoUseFirstDuplicateData?: "on",
-       *    autoSkipNotFound?: "on",
-       *    autoSelectLastContract?: "on",
-       *    existingDataStrat: ExistingDataStrategy,
-       * }} FormEntries
-       * @type {FormEntries} */
-      // @ts-ignore We know what's in the form
-      const formData = Object.fromEntries(
-        new FormData(formRef.current).entries()
-      );
-
-      if (!formData.allStudents || !formData.wrongContracts) {
-        alert("Merci de déposer tous les fichiers");
-        return;
-      }
-
-      submitButtonRef.current.disabled = true;
-
-      const [allPeopleBuffer, wrongContractsBuffer] = await Promise.all([
-        formData.allStudents.arrayBuffer(),
-        formData.wrongContracts.arrayBuffer(),
-      ]);
-
-      const allPeopleWorkbook = XLSX.read(allPeopleBuffer);
-      let selectedAllPeopleSheet = 0;
-      if (allPeopleWorkbook.SheetNames.length > 1) {
-        const promptRes = promptIndex(
-          "Tableur agapeo: Sélectionnez la feuille de données",
-          allPeopleWorkbook.SheetNames,
-          0,
-          true
-        );
-        if (promptRes === null) {
-          submitButtonRef.current.disabled = false;
-          return;
-        }
-        selectedAllPeopleSheet = promptRes;
-      }
-      const allPeopleSheet =
-        allPeopleWorkbook.Sheets[
-          allPeopleWorkbook.SheetNames[selectedAllPeopleSheet]
-        ];
-      /** @type {FillContractsClassePerson[]} */
-      const allPeopleJSON = XLSX.utils.sheet_to_json(allPeopleSheet);
-      if (
-        !Array.isArray(allPeopleJSON) ||
-        !objectContainsKeys(allPeopleJSON[0], [
-          "Nom",
-          "Prenom",
-          "DateNaissance",
-        ])
-      ) {
-        submitButtonRef.current.disabled = false;
-        alert("Le fichier d'élèves est vide ou corrompu. Veuillez réessayer.");
-        console.error(allPeopleJSON[0]);
-        return;
-      }
-      namedLog({ allPeopleJSON });
-
-      const wrongContractsWorkbook = XLSX.read(wrongContractsBuffer);
-
-      let selectedWrongContractsSheet = 0;
-      if (wrongContractsWorkbook.SheetNames.length > 1) {
-        const promptRes = promptIndex(
-          "Tableur des contrats incomplêts: Sélectionnez la feuille de données",
-          wrongContractsWorkbook.SheetNames,
-          0,
-          true
-        );
-        if (promptRes === null) {
-          submitButtonRef.current.disabled = false;
-          return;
-        }
-        selectedWrongContractsSheet = promptRes;
-      }
-      const wrongContractsSheet =
-        wrongContractsWorkbook.Sheets[
-          wrongContractsWorkbook.SheetNames[selectedWrongContractsSheet]
-        ];
-
-      /** @type {FillContractsClasseContract[]} */
-      const wrongContractsJSON = XLSX.utils.sheet_to_json(wrongContractsSheet);
-      if (
-        !Array.isArray(wrongContractsJSON) ||
-        !objectContainsKeys(wrongContractsJSON[0], [
-          "e id",
-          "e nom",
-          "e prenom",
-          "institution",
-          "institution id",
-        ])
-      ) {
-        submitButtonRef.current.disabled = false;
-        alert(
-          "Le fichier de contrats est vide ou corrompu. Veuillez réessayer."
-        );
-        return;
-      }
-
-      namedLog({ wrongContractsJSON });
-
-      const contractsById = Object.fromEntries(
-        wrongContractsJSON.map((wc) => [wc["e id"], wc])
-      );
-
-      const contractsIdsToHandle = Object.keys(contractsById).sort(
-        (a, b) => parseInt(a) - parseInt(b)
-      );
-      // .slice(127); //TODO: debug
-
-      // const contractsIdsToHandle = [];
-
-      /** @type {FillContractClassesSharedData} */
-      const taskData = {
-        contracts: contractsById,
-        contractsIds: contractsIdsToHandle,
-        existingDataStrategy: formData.existingDataStrat,
-        shouldSelectFirstData: formData.autoUseFirstDuplicateData === "on",
-        shouldSkipContractNotFound: formData.autoSkipNotFound === "on",
-        shouldSelectLastContractNotFound:
-          formData.autoSelectLastContract === "on",
-        contractsNotFound: {},
-        contractsDuplicates: {},
-        contractByContractMode: false,
-      };
-
-      setNewTask(
-        "fillContractClasses",
-        taskData,
-        allPeopleJSON,
-        "Remplissage des contrats sans classe."
-      );
-
-      hideWindow();
-      submitButtonRef.current.disabled = false;
-    }
   }
 
   function WindowApplyPercentFacturation() {
@@ -467,6 +466,148 @@ const locale = window.locale;
         "Ajoute un entrée de rabais à une liste de factures."
       );
     }
+  }
+
+  function WindowAddOtherPrestSection() {
+    /** @type {BindRef<HTMLButtonElement>} */
+    const submitButtonRef = {};
+    /** @type {BindRef<HTMLFormElement>} */
+    const formRef = {};
+
+    /**
+     * @param {SubmitEvent} evt
+     */
+    async function onSubmit(evt) {
+      evt.preventDefault();
+
+      if (!submitButtonRef.current || !formRef.current) {
+        alert("erreur d'initialisation");
+        return;
+      }
+
+      /**
+       * @typedef {{
+       *    wrongContracts: File,
+       * }} FormEntries
+       * @type {FormEntries} */
+      // @ts-ignore We know what's in the form
+      const formData = Object.fromEntries(
+        new FormData(formRef.current).entries()
+      );
+
+      if (!formData.wrongContracts) {
+        alert("Merci de déposer tous les fichiers");
+        return;
+      }
+
+      submitButtonRef.current.disabled = true;
+
+      const wrongContractsBuffer = await formData.wrongContracts.arrayBuffer();
+
+      const wrongContractsWorkbook = XLSX.read(wrongContractsBuffer);
+
+      let selectedWrongContractsSheet = 0;
+      if (wrongContractsWorkbook.SheetNames.length > 1) {
+        const promptRes = promptIndex(
+          "Tableur des contrats incomplêts: Sélectionnez la feuille de données",
+          wrongContractsWorkbook.SheetNames,
+          0,
+          true
+        );
+        if (promptRes === null) {
+          submitButtonRef.current.disabled = false;
+          return;
+        }
+        selectedWrongContractsSheet = promptRes;
+      }
+      const wrongContractsSheet =
+        wrongContractsWorkbook.Sheets[
+          wrongContractsWorkbook.SheetNames[selectedWrongContractsSheet]
+        ];
+
+      /** @type {AddOtherPrestContract[]} */
+      const wrongContractsJSON = XLSX.utils.sheet_to_json(wrongContractsSheet);
+      if (
+        !Array.isArray(wrongContractsJSON) ||
+        !objectContainsKeys(wrongContractsJSON[0], ["c ID"])
+      ) {
+        submitButtonRef.current.disabled = false;
+        alert(
+          "Le fichier de contrats est vide ou corrompu. Veuillez réessayer."
+        );
+        return;
+      }
+
+      const contractsById = Object.fromEntries(
+        wrongContractsJSON.map((wc) => [wc["c ID"], wc])
+      );
+
+      namedLog({ wrongContractsJSON, contractsById });
+
+      const contractsIdsToHandle = Object.keys(contractsById)
+        .map(Number)
+        .sort((a, b) => a - b);
+      // .slice(127); //TODO: debug
+
+      /** @type {AddOtherPrestSharedData} */
+      const taskData = {
+        contracts: contractsById,
+        contractIds: contractsIdsToHandle,
+        doneContracts: [],
+      };
+
+      setNewTask(
+        "addOtherPrest",
+        taskData,
+        undefined,
+        "Remplissage des contrats sans classe."
+      );
+
+      hideWindow();
+      submitButtonRef.current.disabled = false;
+    }
+
+    return createElem(
+      "p",
+      null,
+      createElem(
+        "h3",
+        null,
+        "Ajout automatique des 'autres prestations' 'Aide individuelle'"
+      ),
+      createElem(
+        "form",
+        {
+          onsubmit: onSubmit,
+          bindTo: formRef,
+          style: {
+            borderLeft: "3px solid gray",
+            paddingLeft: "10px",
+            display: "flex",
+            flexFlow: "column",
+            alignItems: "flex-start",
+            gap: "10px",
+          },
+        },
+        createElem(
+          "label",
+          { htmlFor: "inputWrongContracts" },
+          "Feuille Excel avec les contrats incomplèts (e id)"
+        ),
+        createElem("input", {
+          name: "wrongContracts",
+          type: "file",
+          accept: ".xlsx, .xlsm, .xls",
+          required: true,
+          id: "inputWrongContracts",
+        }),
+        createElem(
+          "button",
+          { type: "submit", bindTo: submitButtonRef },
+          "Démarrer"
+        )
+      )
+    );
   }
 
   function WindowTestSection() {
@@ -701,12 +842,34 @@ const locale = window.locale;
     taskFn: goToContractsTaskFn,
   };
 
+  /** @type {TaskParams} */
+  const addOtherPrestTaskParams = {
+    taskFn: addOtherPrestTask,
+    actionsElems: [
+      createElem(
+        "button",
+        {
+          async onclick(e) {
+            e.stopPropagation();
+            if (!confirm("Êtes vous sûr de vouloir passer au contrat suivant?"))
+              return;
+            const task = await getCurrentTask();
+            if (!task) return;
+            nextTaskStep("endOfLoop", { ...task, isPaused: false });
+          },
+        },
+        "Passer au contrat suivant"
+      ),
+    ],
+  };
+
   const taskMap = {
     /** @type {TaskParams} */
     test: { taskFn: testTask },
     fillContractClasses: fillContractClassesTaskParams,
     applyPercentFacturation: applyPercentFacturationTaskParams,
     goToContracts: goToContractsTaskParams,
+    addOtherPrest: addOtherPrestTaskParams,
   };
 
   async function handleTasks() {
@@ -1716,6 +1879,165 @@ const locale = window.locale;
   }
 
   /**
+   * @typedef {{
+   *      "c ID":number,
+   *  }} AddOtherPrestContract
+   *
+   * @typedef {{
+   *      contracts: {
+   *          [id: number]: AddOtherPrestContract
+   *      };
+   *      contractIds: number[];
+   *      doneContracts: AddOtherPrestContract[]
+   * }} AddOtherPrestSharedData
+   *
+   * @typedef {Omit<Task, "sharedData"> & {
+   *      sharedData: AddOtherPrestSharedData
+   * }} AddOtherPrestTask
+   *
+   * @param {AddOtherPrestTask} task
+   */
+  async function addOtherPrestTask(task) {
+    // @ts-ignore check for icare-helpers existence
+    if (window.HAS_ICARE_HELPERS_LOADED) {
+      alert(
+        "Cette tâche ne peut pas fonctionner quand le script 'icare-helpers' est chargé. Désactivez le d'abord."
+      );
+      throw new Error("Cette tâche ne supporte pas le script 'icare-helpers'");
+    }
+
+    const currentContractId = task.sharedData.contractIds[0];
+    const currentContract = currentContractId
+      ? task.sharedData.contracts[currentContractId]
+      : undefined;
+
+    namedLog({ currentContract });
+
+    switch (task.stepName) {
+      case "start": {
+        if (task.sharedData.contractIds.length === 0) {
+          nextTaskStep("success", task);
+          return;
+        }
+        const totalContracts = Object.keys(task.sharedData.contracts).length;
+        nextTaskStep("goToContract", {
+          ...task,
+          lastMessage: `id contrat: ${currentContractId}\n${
+            totalContracts - task.sharedData.contractIds.length + 1
+          }/${totalContracts}`,
+        });
+
+        return;
+      }
+      case "goToContract": {
+        //go to contract url
+        if (
+          !urlCheckOrGo(
+            `/icare/Be/VertragEdit.do?method=main&aktuelle=true&theVerId=${currentContractId}`
+          )
+        ) {
+          return;
+        }
+
+        /** @type {HTMLInputElement | null} */
+        const confirmBox = document.querySelector("#trotzdem");
+        if (confirmBox) {
+          //confirm page
+          await nextTaskStep("addPrestation", task, true);
+          confirmBox.checked = true;
+          confirmBox.form?.submit();
+          return;
+        }
+        nextTaskStep("addPrestation", task);
+        return;
+      }
+      case "addPrestation": {
+        //check page, I don't check the contract id because I don't have all day. may cause issues in the future ¯\_(ツ)_/¯
+        if (!urlCheck(`/icare/Be/VertragEdit.do`)) {
+          return;
+        }
+
+        //click on "other prestations" tab
+        const tabTitle = await waitForSelector("#ui-id-9");
+        tabTitle.click();
+
+        //show prest form
+
+        /** @type {HTMLSelectElement} */
+        const newPrestSelect = await waitForSelector(
+          "#ui-id-10 form[name=PlatzierungNewForm] #al-platzierungstyp-new"
+        );
+        newPrestSelect.value = "1282"; //Aide individuelle B (125.-)
+        newPrestSelect.onchange?.call(newPrestSelect); //the event handler doesn't use the event parameter
+
+        const newPrestForm = await waitForSelector("#ui-id-10 form#al-form");
+        await async_setTimeout(100);
+
+        //set start date
+        /** @type {HTMLInputElement} */
+        const startDateInput = await waitForSelector(() =>
+          newPrestForm.querySelector("#al-beginn")
+        );
+        startDateInput.value = "01.11.2022";
+
+        //set end date
+        /** @type {HTMLInputElement} */
+        const endDateInput = await waitForSelector(() =>
+          newPrestForm.querySelector("#al-ende")
+        );
+        endDateInput.value = "30.11.2022";
+
+        //click on save
+        /** @type {HTMLButtonElement} */
+        const saveButton = await waitForSelector(() =>
+          newPrestForm.querySelector("button[type=submit].btn-success")
+        );
+
+        saveButton?.click();
+
+        //wait for success message
+        try {
+          await waitForSelector(() => {
+            /** @type {HTMLElement | null} */
+            const savedBox = document.querySelector("#saved");
+            return savedBox?.style.visibility === "visible" ? savedBox : null;
+          });
+        } catch (e) {
+          throw new Error(
+            `L'enregistrement automatique de ${currentContractId} n'a pas fonctionné, continuez la tâche pour réessayer ou faites le manuellement et passez au contrat suivant`
+          );
+        }
+
+        await nextTaskStep("endOfLoop", task);
+
+        return;
+      }
+      case "endOfLoop": {
+        /** @type {AddOtherPrestTask} */
+        const newTask = {
+          ...task,
+          sharedData: {
+            ...task.sharedData,
+            contractIds: task.sharedData.contractIds.slice(1),
+            doneContracts: [
+              ...task.sharedData.doneContracts,
+              ...(currentContract ? [currentContract] : []),
+            ],
+          },
+        };
+        nextTaskStep("start", newTask);
+        return;
+      }
+      case "success": {
+        alert("Tâche terminée!");
+        console.log("contrats terminés", task.sharedData.doneContracts);
+        await removeCurrentTask();
+        return;
+      }
+    }
+  }
+
+  /**
    * @param {Element} parent
    */
   function getFacInputs(parent) {
@@ -2061,7 +2383,7 @@ const locale = window.locale;
 
   /**
    * @template {HTMLElement} T
-   * @param {string | (()=>(HTMLElement|null))} selector
+   * @param {string | (()=>(T|null))} selector
    * @return {Promise<T>}
    */
   function waitForSelector(selector, checkInterval = 100, maxChecks = 50) {
@@ -2159,6 +2481,20 @@ const locale = window.locale;
   function objectContainsKeys(obj, keys) {
     const objKeys = Object.keys(obj);
     return keys.every((k) => objKeys.includes(k.toString()));
+  }
+
+  /**
+   * @return {Promise<DOMHighResTimeStamp>}
+   */
+  function async_requestAnimationFrame() {
+    return new Promise((res) => requestAnimationFrame(res));
+  }
+  /**
+   * @param {number} ms
+   * @return {Promise<void>}
+   */
+  function async_setTimeout(ms) {
+    return new Promise((res) => setTimeout(res, ms));
   }
 
   class Warning {
