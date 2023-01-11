@@ -1,6 +1,14 @@
 {
   "extends": "@tsconfig/recommended/tsconfig.json",
   "compilerOptions": {
-    "target": "ES2022"
+    "outDir": "./dist/",
+    "sourceRoot": "./src/",
+    "noImplicitAny": true,
+    "module": "es2022",
+    "target": "es6",
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "strictNullChecks": true,
+    "typeRoots": ["node_modules/@types"]
   }
 }

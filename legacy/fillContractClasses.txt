@@ -1,0 +1,34 @@
+Proc
+STEP 1 -> searchPerson
+1. check or go url https://icare-vali.lausanne.ch/icare/Be/PersonenList.do?suchen=firstSearch
+2. click vider filtre
+3. focus person num
+4. entrer n°
+5. click search
+
+STEP 2 -> findPerso
+1. check url https://icare-vali.lausanne.ch/icare/Be/PersonenList.do
+2. check if id is still the same
+3. find person in full list using name and birthday
+4. store full person info
+
+STEP 3 -> searchContract
+1. check or go url https://icare-vali.lausanne.ch/icare/Be/VertragList.do?reset=true
+2. enter contract num
+3. enter institution id
+4. click search
+
+STEP 3 -> findContract
+1. check url https://icare-vali.lausanne.ch/icare/Be/VertragList.do?suchen=true
+2. check id
+3. click contract
+
+STEP 5 -> fill collège
+1. check url https://icare-vali.lausanne.ch/icare/Be/VertragEdit.do?method=main&aktuelle=true&theVerId=
+2. check id
+3. wait for college select (find by title in tr)
+4. check if college select empty else prompt for skip
+5. search options for college else alert for manual input
+6. click save
+
+STEP 6 -> 
