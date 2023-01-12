@@ -1,4 +1,6 @@
 import localforage from "localforage";
+import { WindowApplyPercentFacturation } from "../components/WindowApplyPercentFacturation";
+import { WindowFillContractsClassesSection } from "../components/WindowFillContractsClassesSection";
 import { waitForSelector, waitForValue } from "../lib/async";
 import { Warning } from "../lib/errors";
 import { fillContractData } from "../lib/icareInteractions";
@@ -515,6 +517,7 @@ async function fillContractClassesTaskFn(task: FillContractClasseTask) {
 
 export const fillContractClassesTaskParams: TaskParams = {
   taskFn: fillContractClassesTaskFn,
+  windowSectionComponent: WindowFillContractsClassesSection,
   actionsElems: [
     createElem(
       "button",

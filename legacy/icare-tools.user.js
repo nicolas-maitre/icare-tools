@@ -146,9 +146,7 @@ const locale = window.locale;
        * }} FormEntries
        * @type {FormEntries} */
       // @ts-ignore We know what's in the form
-      const formData = Object.fromEntries(
-        new FormData(formRef.current).entries()
-      );
+      const formData = Object.fromEntries(new FormData(formRef.current).entries());
 
       if (!formData.allStudents || !formData.wrongContracts) {
         alert("Merci de déposer tous les fichiers");
@@ -178,18 +176,12 @@ const locale = window.locale;
         selectedAllPeopleSheet = promptRes;
       }
       const allPeopleSheet =
-        allPeopleWorkbook.Sheets[
-          allPeopleWorkbook.SheetNames[selectedAllPeopleSheet]
-        ];
+        allPeopleWorkbook.Sheets[allPeopleWorkbook.SheetNames[selectedAllPeopleSheet]];
       /** @type {FillContractsClassePerson[]} */
       const allPeopleJSON = XLSX.utils.sheet_to_json(allPeopleSheet);
       if (
         !Array.isArray(allPeopleJSON) ||
-        !objectContainsKeys(allPeopleJSON[0], [
-          "Nom",
-          "Prenom",
-          "DateNaissance",
-        ])
+        !objectContainsKeys(allPeopleJSON[0], ["Nom", "Prenom", "DateNaissance"])
       ) {
         submitButtonRef.current.disabled = false;
         alert("Le fichier d'élèves est vide ou corrompu. Veuillez réessayer.");
@@ -232,22 +224,18 @@ const locale = window.locale;
         ])
       ) {
         submitButtonRef.current.disabled = false;
-        alert(
-          "Le fichier de contrats est vide ou corrompu. Veuillez réessayer."
-        );
+        alert("Le fichier de contrats est vide ou corrompu. Veuillez réessayer.");
         return;
       }
 
       namedLog({ wrongContractsJSON });
 
-      const contractsById = Object.fromEntries(
-        wrongContractsJSON.map((wc) => [wc["e id"], wc])
-      );
+      const contractsById = Object.fromEntries(wrongContractsJSON.map((wc) => [wc["e id"], wc]));
 
       const contractsIdsToHandle = Object.keys(contractsById).sort(
         (a, b) => parseInt(a) - parseInt(b)
       );
-      // .slice(127); //TODO: debug
+      // .slice(127); //debug
 
       /** @type {FillContractClassesSharedData} */
       const taskData = {
@@ -256,8 +244,7 @@ const locale = window.locale;
         existingDataStrategy: formData.existingDataStrat,
         shouldSelectFirstData: formData.autoUseFirstDuplicateData === "on",
         shouldSkipContractNotFound: formData.autoSkipNotFound === "on",
-        shouldSelectLastContractNotFound:
-          formData.autoSelectLastContract === "on",
+        shouldSelectLastContractNotFound: formData.autoSelectLastContract === "on",
         contractsNotFound: {},
         contractsDuplicates: {},
         contractByContractMode: false,
@@ -383,11 +370,7 @@ const locale = window.locale;
             style: { margin: "0 .5em" },
             checked: true,
           }),
-          createElem(
-            "label",
-            { htmlFor: "radioExistingDataStratAsk" },
-            "Toujours demander"
-          ),
+          createElem("label", { htmlFor: "radioExistingDataStratAsk" }, "Toujours demander"),
           createElem("br"),
           createElem("input", {
             name: "existingDataStrat",
@@ -396,11 +379,7 @@ const locale = window.locale;
             value: "skip",
             style: { margin: "0 .5em" },
           }),
-          createElem(
-            "label",
-            { htmlFor: "radioExistingDataStratSkip" },
-            "Toujours ignorer"
-          ),
+          createElem("label", { htmlFor: "radioExistingDataStratSkip" }, "Toujours ignorer"),
           createElem("br"),
           createElem("input", {
             name: "existingDataStrat",
@@ -409,17 +388,9 @@ const locale = window.locale;
             value: "force",
             style: { margin: "0 .5em" },
           }),
-          createElem(
-            "label",
-            { htmlFor: "radioExistingDataStratForce" },
-            "Toujours remplacer"
-          )
+          createElem("label", { htmlFor: "radioExistingDataStratForce" }, "Toujours remplacer")
         ),
-        createElem(
-          "button",
-          { type: "submit", bindTo: submitButtonRef },
-          "Démarrer"
-        )
+        createElem("button", { type: "submit", bindTo: submitButtonRef }, "Démarrer")
       )
     );
   }
@@ -491,9 +462,7 @@ const locale = window.locale;
        * }} FormEntries
        * @type {FormEntries} */
       // @ts-ignore We know what's in the form
-      const formData = Object.fromEntries(
-        new FormData(formRef.current).entries()
-      );
+      const formData = Object.fromEntries(new FormData(formRef.current).entries());
 
       if (!formData.wrongContracts) {
         alert("Merci de déposer tous les fichiers");
@@ -532,22 +501,18 @@ const locale = window.locale;
         !objectContainsKeys(wrongContractsJSON[0], ["c ID"])
       ) {
         submitButtonRef.current.disabled = false;
-        alert(
-          "Le fichier de contrats est vide ou corrompu. Veuillez réessayer."
-        );
+        alert("Le fichier de contrats est vide ou corrompu. Veuillez réessayer.");
         return;
       }
 
-      const contractsById = Object.fromEntries(
-        wrongContractsJSON.map((wc) => [wc["c ID"], wc])
-      );
+      const contractsById = Object.fromEntries(wrongContractsJSON.map((wc) => [wc["c ID"], wc]));
 
       namedLog({ wrongContractsJSON, contractsById });
 
       const contractsIdsToHandle = Object.keys(contractsById)
         .map(Number)
         .sort((a, b) => a - b);
-      // .slice(127); //TODO: debug
+      // .slice(127); // debug
 
       /** @type {AddOtherPrestSharedData} */
       const taskData = {
@@ -556,12 +521,7 @@ const locale = window.locale;
         doneContracts: [],
       };
 
-      setNewTask(
-        "addOtherPrest",
-        taskData,
-        undefined,
-        "Remplissage des contrats sans classe."
-      );
+      setNewTask("addOtherPrest", taskData, undefined, "Remplissage des contrats sans classe.");
 
       hideWindow();
       submitButtonRef.current.disabled = false;
@@ -570,11 +530,7 @@ const locale = window.locale;
     return createElem(
       "p",
       null,
-      createElem(
-        "h3",
-        null,
-        "Ajout automatique des 'autres prestations' 'Aide individuelle'"
-      ),
+      createElem("h3", null, "Ajout automatique des 'autres prestations' 'Aide individuelle'"),
       createElem(
         "form",
         {
@@ -601,11 +557,7 @@ const locale = window.locale;
           required: true,
           id: "inputWrongContracts",
         }),
-        createElem(
-          "button",
-          { type: "submit", bindTo: submitButtonRef },
-          "Démarrer"
-        )
+        createElem("button", { type: "submit", bindTo: submitButtonRef }, "Démarrer")
       )
     );
   }
@@ -630,9 +582,7 @@ const locale = window.locale;
   //add contract button to person page
   if (urlCheck("/icare/Be/PersonEdit.do")) {
     const h2 = document.querySelector("#data h2");
-    const personIdForButton = Number(
-      h2?.textContent?.split("(").at(1)?.split(")").at(0)
-    );
+    const personIdForButton = Number(h2?.textContent?.split("(").at(1)?.split(")").at(0));
     if (h2 && !isNaN(personIdForButton)) {
       e(h2).addElem(
         "button",
@@ -661,11 +611,7 @@ const locale = window.locale;
     "div",
     {
       async onclick() {
-        if (
-          confirm(
-            "Êtes vous sûr de vouloir arrêter l'execution de la tâche courante?"
-          )
-        ) {
+        if (confirm("Êtes vous sûr de vouloir arrêter l'execution de la tâche courante?")) {
           await localforage.setItem("LTShouldStopTask", true);
           await removeCurrentTask();
           alert(
@@ -697,13 +643,7 @@ const locale = window.locale;
       },
       "__"
     ),
-    createElem(
-      "h4",
-      null,
-      "TÂCHE EN COURS,",
-      createElem("br"),
-      "CLIQUEZ ICI POUR ANNULER"
-    ),
+    createElem("h4", null, "TÂCHE EN COURS,", createElem("br"), "CLIQUEZ ICI POUR ANNULER"),
     createElem("p", { bindTo: taskWindowInfos, style: { whiteSpace: "pre" } }),
     createElem(
       "button",
@@ -750,9 +690,7 @@ const locale = window.locale;
     }
 
     if (taskWindowResumeButtonRef.current)
-      taskWindowResumeButtonRef.current.style.display = task.isPaused
-        ? "block"
-        : "none";
+      taskWindowResumeButtonRef.current.style.display = task.isPaused ? "block" : "none";
 
     if (taskWindowInfos.current)
       taskWindowInfos.current.textContent =
@@ -820,8 +758,7 @@ const locale = window.locale;
         {
           async onclick(e) {
             e.stopPropagation();
-            if (!confirm("Êtes vous sûr de vouloir passer au contrat suivant?"))
-              return;
+            if (!confirm("Êtes vous sûr de vouloir passer au contrat suivant?")) return;
             const task = await getCurrentTask();
             if (!task) return;
             nextTaskStep("endOfLoop", { ...task, isPaused: false });
@@ -851,8 +788,7 @@ const locale = window.locale;
         {
           async onclick(e) {
             e.stopPropagation();
-            if (!confirm("Êtes vous sûr de vouloir passer au contrat suivant?"))
-              return;
+            if (!confirm("Êtes vous sûr de vouloir passer au contrat suivant?")) return;
             const task = await getCurrentTask();
             if (!task) return;
             nextTaskStep("endOfLoop", { ...task, isPaused: false });
@@ -1027,8 +963,7 @@ const locale = window.locale;
         }
 
         const contractsCount = Object.keys(task.sharedData.contracts).length;
-        const currentContractIndex =
-          contractsCount - task.sharedData.contractsIds.length + 1;
+        const currentContractIndex = contractsCount - task.sharedData.contractsIds.length + 1;
         /** @type {FillContractClasseTask} */
         const taskWithMessage = {
           ...task,
@@ -1036,27 +971,21 @@ const locale = window.locale;
         };
 
         //skip to step if person already known
-        if (person["e naissance"])
-          nextTaskStep("useDataFromAllPeople", taskWithMessage);
+        if (person["e naissance"]) nextTaskStep("useDataFromAllPeople", taskWithMessage);
         else nextTaskStep("searchPerson", taskWithMessage);
 
         return;
       }
 
       case "searchPerson": {
-        if (!urlCheckOrGo("/icare/Be/PersonenList.do?suchen=firstSearch"))
-          return;
+        if (!urlCheckOrGo("/icare/Be/PersonenList.do?suchen=firstSearch")) return;
 
         /** @type {HTMLElement | null} */
-        const resetFilterBtn = document.querySelector(
-          "button.btn-danger.float-left"
-        );
+        const resetFilterBtn = document.querySelector("button.btn-danger.float-left");
         resetFilterBtn?.click();
 
         /** @type {HTMLInputElement | null} */
-        const personIdInput = document.querySelector(
-          "#personentyp[name=perId]"
-        );
+        const personIdInput = document.querySelector("#personentyp[name=perId]");
         if (!personIdInput) throw new Error("person input not found");
         personIdInput.value = personId;
 
@@ -1073,13 +1002,10 @@ const locale = window.locale;
       }
 
       case "findPerson": {
-        if (!urlCheck("/icare/Be/PersonenList.do", "?suchen=firstSearch"))
-          return;
+        if (!urlCheck("/icare/Be/PersonenList.do", "?suchen=firstSearch")) return;
 
         /** @type {NodeListOf<HTMLTableRowElement>} */
-        const personLines = document.querySelectorAll(
-          ".dataTable.jqResultList > tbody > tr"
-        );
+        const personLines = document.querySelectorAll(".dataTable.jqResultList > tbody > tr");
         if (personLines.length !== 1)
           throw new Warning(
             `Personne précise introuvable. id:${personId}. ${personLines.length} résultat(s)`
@@ -1121,24 +1047,18 @@ const locale = window.locale;
         //find person in people list
         let foundPeople = allPeople.filter(
           (p) =>
-            person["e nom"]
-              .toLowerCase()
-              .includes(p.Nom.trim().toLowerCase()) &&
+            person["e nom"].toLowerCase().includes(p.Nom.trim().toLowerCase()) &&
             person["e naissance"] === p.DateNaissance
         );
 
         if (foundPeople.length === 0)
-          throw new Warning(
-            `${person["e nom"]} ${person["e prenom"]} introuvable dans le fichier`
-          );
+          throw new Warning(`${person["e nom"]} ${person["e prenom"]} introuvable dans le fichier`);
 
         let personIndex = 0;
         if (foundPeople.length > 1) {
           //search by first name
           const foundByFirstName = foundPeople.filter((p) =>
-            person["e prenom"]
-              .toLowerCase()
-              .includes(p.Prenom.trim().toLowerCase())
+            person["e prenom"].toLowerCase().includes(p.Prenom.trim().toLowerCase())
           );
           if (foundByFirstName.length > 0) foundPeople = foundByFirstName;
 
@@ -1149,9 +1069,7 @@ const locale = window.locale;
                 "Personne exacte introuvable.\n" +
                   `Recherche: ${person["e prenom"]} ${person["e nom"]} [${personId}]` +
                   "Veuillez sélectionner la bonne personne:",
-                foundPeople.map(
-                  (p) => `${p.Prenom} ${p.Nom} ${p.DateNaissance}`
-                )
+                foundPeople.map((p) => `${p.Prenom} ${p.Nom} ${p.DateNaissance}`)
               ) ?? 0;
           }
         }
@@ -1191,8 +1109,7 @@ const locale = window.locale;
         const institutionIdSelect = document.querySelector(
           "select[name=mandantgruppe].select2-offscreen"
         );
-        if (!institutionIdSelect)
-          throw new Error("institution input not found");
+        if (!institutionIdSelect) throw new Error("institution input not found");
 
         const institutionId = person["institution id"].toString();
 
@@ -1214,9 +1131,7 @@ const locale = window.locale;
           });
 
           if (task.sharedData.shouldSkipContractNotFound) {
-            console.info(
-              "skipping contract because the institution was not found"
-            );
+            console.info("skipping contract because the institution was not found");
             nextTaskStep("endOfLoop", task);
             return;
           }
@@ -1233,9 +1148,7 @@ const locale = window.locale;
         }
 
         /** @type {HTMLFormElement | null} */
-        const contractForm = document.querySelector(
-          "form[name=VertragListeForm]"
-        );
+        const contractForm = document.querySelector("form[name=VertragListeForm]");
         if (!contractForm) throw new Error("contract form not found");
 
         task = await nextTaskStep("findContract", task, true);
@@ -1249,28 +1162,17 @@ const locale = window.locale;
         if (!urlCheck("/icare/Be/VertragList.do", "?reset=true")) return;
 
         /** @type {NodeListOf<HTMLTableRowElement>} */
-        const contractLines = document.querySelectorAll(
-          "#ver.dataTable > tbody > tr"
-        );
+        const contractLines = document.querySelectorAll("#ver.dataTable > tbody > tr");
 
         /**
          * @param {HTMLTableRowElement} tr
          */
         function getContractLineCells(tr) {
           const tds = tr.getElementsByTagName("td");
-          const [
-            id,
-            name,
-            institution,
-            group,
-            dates,
-            clientGroup,
-            internalMessage,
-            deleteDate,
-          ] = tds;
+          const [id, name, institution, group, dates, clientGroup, internalMessage, deleteDate] =
+            tds;
 
-          const [startDate, endDate] =
-            dates.textContent?.trim()?.split(" - ") ?? [];
+          const [startDate, endDate] = dates.textContent?.trim()?.split(" - ") ?? [];
 
           return {
             id,
@@ -1321,10 +1223,7 @@ const locale = window.locale;
           task = await setCurrentTask(newTask);
 
           //auto skip if no contract found
-          if (
-            task.sharedData.shouldSkipContractNotFound &&
-            contractLines.length === 0
-          ) {
+          if (task.sharedData.shouldSkipContractNotFound && contractLines.length === 0) {
             console.info("skipping contract because it wasn't found.");
             nextTaskStep("endOfLoop", task);
             return;
@@ -1332,17 +1231,11 @@ const locale = window.locale;
 
           //select last if multiple results
           if (task.sharedData.shouldSelectLastContractNotFound) {
-            contractCells = [...contractLines]
-              .map(getContractLineCells)
-              .reduce((prev, curr) => {
-                const currDate = new Date(
-                  curr.startDate.split(".").reverse().join("-")
-                );
-                const prevDate = new Date(
-                  prev.startDate.split(".").reverse().join("-")
-                );
-                return currDate > prevDate ? curr : prev;
-              });
+            contractCells = [...contractLines].map(getContractLineCells).reduce((prev, curr) => {
+              const currDate = new Date(curr.startDate.split(".").reverse().join("-"));
+              const prevDate = new Date(prev.startDate.split(".").reverse().join("-"));
+              return currDate > prevDate ? curr : prev;
+            });
           } else {
             //prompt user to choose correct contract
             alert(
@@ -1376,12 +1269,7 @@ const locale = window.locale;
       }
 
       case "openContractEditPage": {
-        if (
-          !urlCheck(
-            "/icare/Be/VertragEdit.do?method=main&aktuelle=true&theVerId="
-          )
-        )
-          return;
+        if (!urlCheck("/icare/Be/VertragEdit.do?method=main&aktuelle=true&theVerId=")) return;
 
         //check if id is still the same
         const nameAndIdH2 = document.querySelector("#data h2");
@@ -1389,9 +1277,7 @@ const locale = window.locale;
           throw new Error("L'id du contrat ne correspond pas.");
 
         /** @type {HTMLIFrameElement} */
-        const iframe = await waitForSelector(
-          "iframe[name=klassifizierungframe]"
-        );
+        const iframe = await waitForSelector("iframe[name=klassifizierungframe]");
         if (!iframe) throw new Error("iframe de contrat introuvable");
         const iframeSrc = await waitForValue(() => iframe.src || undefined);
         if (!iframeSrc) {
@@ -1410,20 +1296,10 @@ const locale = window.locale;
       }
 
       case "fillContractCollege": {
-        if (
-          !urlCheck([
-            "/icare/KlassifizierungSave.do",
-            "/icare/PrepareKlassifizierung.do",
-          ])
-        )
+        if (!urlCheck(["/icare/KlassifizierungSave.do", "/icare/PrepareKlassifizierung.do"]))
           return;
 
-        await fillContractData(
-          task,
-          "Collège",
-          person.schoolName,
-          "fillContractClass"
-        );
+        await fillContractData(task, "Collège", person.schoolName, "fillContractClass");
 
         // nextTaskStep("fillContractClass", task, true);
 
@@ -1431,20 +1307,10 @@ const locale = window.locale;
       }
 
       case "fillContractClass": {
-        if (
-          !urlCheck([
-            "/icare/KlassifizierungSave.do",
-            "/icare/PrepareKlassifizierung.do",
-          ])
-        )
+        if (!urlCheck(["/icare/KlassifizierungSave.do", "/icare/PrepareKlassifizierung.do"]))
           return;
 
-        await fillContractData(
-          task,
-          "Classe et enseignant",
-          person.schoolClass,
-          "endOfLoop"
-        );
+        await fillContractData(task, "Classe et enseignant", person.schoolClass, "endOfLoop");
 
         // nextTaskStep("endOfLoop", task, true);
 
@@ -1483,8 +1349,7 @@ const locale = window.locale;
 
         //store finished task
         (async () => {
-          const finishedTasks =
-            (await localforage.getItem("LTFinishedTasks")) ?? [];
+          const finishedTasks = (await localforage.getItem("LTFinishedTasks")) ?? [];
           /** @type {FillContractClasseTask} */
           const cleanTask = {
             ...task,
@@ -1493,22 +1358,15 @@ const locale = window.locale;
               contracts: {},
             },
           };
-          await localforage.setItem("LTFinishedTasks", [
-            ...finishedTasks,
-            cleanTask,
-          ]);
+          await localforage.setItem("LTFinishedTasks", [...finishedTasks, cleanTask]);
         })();
 
         const elapsedTimeString = new Date(endedAt - task.startedAt)
           .toISOString()
           .substring(11, 19);
 
-        const contractsNotFoundEntries = Object.entries(
-          task.sharedData.contractsNotFound
-        );
-        const contractDuplicatesEntries = Object.entries(
-          task.sharedData.contractsDuplicates
-        );
+        const contractsNotFoundEntries = Object.entries(task.sharedData.contractsNotFound);
+        const contractDuplicatesEntries = Object.entries(task.sharedData.contractsDuplicates);
         //display end of task infos
         alert(
           `Tâche terminée! (en ${elapsedTimeString}) \n` +
@@ -1517,17 +1375,13 @@ const locale = window.locale;
               Object.keys(task.sharedData.contracts).length
             }.\n` +
             contractsNotFoundEntries
-              .map(
-                ([id, { fname, lname }], i) => `${i}. [${id}] ${fname} ${lname}`
-              )
+              .map(([id, { fname, lname }], i) => `${i}. [${id}] ${fname} ${lname}`)
               .join("\n") +
             `${contractDuplicatesEntries.length} contrats multiples sur ${
               Object.keys(task.sharedData.contracts).length
             }.\n` +
             contractDuplicatesEntries
-              .map(
-                ([id, { fname, lname }], i) => `${i}. [${id}] ${fname} ${lname}`
-              )
+              .map(([id, { fname, lname }], i) => `${i}. [${id}] ${fname} ${lname}`)
               .join("\n")
         );
 
@@ -1597,9 +1451,7 @@ const locale = window.locale;
         //get factures from list
         /** @type {HTMLTableRowElement[]} */
         // @ts-ignore
-        const TRs = [
-          ...document.querySelectorAll("#jqFjDisplayTable > tbody > tr"),
-        ];
+        const TRs = [...document.querySelectorAll("#jqFjDisplayTable > tbody > tr")];
 
         const factures = Object.fromEntries(
           TRs.map((tr) => {
@@ -1639,8 +1491,7 @@ const locale = window.locale;
         }
 
         const facturesCount = Object.keys(task.sharedData.factures).length;
-        const currentIndex =
-          facturesCount - task.sharedData.idsToHandle.length + 1;
+        const currentIndex = facturesCount - task.sharedData.idsToHandle.length + 1;
 
         /** @type {ApplyPercentFacturationTask} */
         const taskWithMessage = {
@@ -1658,9 +1509,7 @@ const locale = window.locale;
         }
 
         const tbody = document.querySelector("#fakPosTable > tbody");
-        const rows = [
-          ...(tbody?.querySelectorAll("tr[class=even], tr[class=odd]") ?? []),
-        ];
+        const rows = [...(tbody?.querySelectorAll("tr[class=even], tr[class=odd]") ?? [])];
         const orders = rows.map((row) => {
           const inputs = getFacInputs(row);
 
@@ -1669,9 +1518,7 @@ const locale = window.locale;
 
           const orderNumber = parseInt(inputs.orderId.value);
           if (isNaN(orderNumber))
-            throw new Error(
-              "order number is not a number " + inputs.orderId.value
-            );
+            throw new Error("order number is not a number " + inputs.orderId.value);
 
           const order = {
             number: orderNumber,
@@ -1732,10 +1579,7 @@ const locale = window.locale;
       }
 
       case "newOrder_startOfLoop": {
-        if (
-          (currentFacture.newOrderIndex ?? Infinity) >=
-          (currentFacture.newOrders?.length ?? 0)
-        ) {
+        if ((currentFacture.newOrderIndex ?? Infinity) >= (currentFacture.newOrders?.length ?? 0)) {
           nextTaskStep("dummyStep", task);
           return;
         }
@@ -1744,8 +1588,7 @@ const locale = window.locale;
       }
 
       case "newOrder_fillOrder": {
-        const orderToFill =
-          currentFacture.newOrders?.[currentFacture.newOrderIndex ?? Infinity];
+        const orderToFill = currentFacture.newOrders?.[currentFacture.newOrderIndex ?? Infinity];
         if (!orderToFill) throw new Error("no order to fill");
         const table = [...document.querySelectorAll("#fakPosTable")].at(-1);
         if (!table) throw new Error("table not found");
@@ -1782,8 +1625,7 @@ const locale = window.locale;
               ...task.sharedData.factures,
               [factureId]: {
                 ...task.sharedData.factures[factureId],
-                newOrderIndex:
-                  (task.sharedData.factures[factureId].newOrderIndex ?? 0) + 1,
+                newOrderIndex: (task.sharedData.factures[factureId].newOrderIndex ?? 0) + 1,
               },
             },
           },
@@ -1841,18 +1683,12 @@ const locale = window.locale;
   async function goToContractsTaskFn(task) {
     switch (task.stepName) {
       case "start": {
-        if (
-          !urlCheckOrGo(
-            "/icare/Be/VertragList.do?suchen=firstSearch&reset=true"
-          )
-        ) {
+        if (!urlCheckOrGo("/icare/Be/VertragList.do?suchen=firstSearch&reset=true")) {
           return;
         }
 
         /** @type {HTMLFormElement | null} */
-        const contractForm = document.querySelector(
-          "form[name=VertragListeForm]"
-        );
+        const contractForm = document.querySelector("form[name=VertragListeForm]");
         if (!contractForm) return;
 
         /** @type {HTMLInputElement | null} */
@@ -1982,9 +1818,7 @@ const locale = window.locale;
 
         //set end date
         /** @type {HTMLInputElement} */
-        const endDateInput = await waitForSelector(() =>
-          newPrestForm.querySelector("#al-ende")
-        );
+        const endDateInput = await waitForSelector(() => newPrestForm.querySelector("#al-ende"));
         endDateInput.value = "30.11.2022";
 
         //click on save
@@ -2059,15 +1893,7 @@ const locale = window.locale;
     /** @type {HTMLInputElement | null} */
     const price = TDs[9].querySelector("input[name=fpPreis]");
 
-    if (
-      !orderId ||
-      !text ||
-      !compteDeb ||
-      !ctrCostDeb ||
-      !compteCred ||
-      !ctrCostCred ||
-      !price
-    ) {
+    if (!orderId || !text || !compteDeb || !ctrCostDeb || !compteCred || !ctrCostCred || !price) {
       throw new Error("Valeurs introuvables");
     }
 
@@ -2099,9 +1925,7 @@ const locale = window.locale;
           `Personne: [${person["e id"]}] ${person["e prenom"]} ${person["e nom"]}`
       );
       task = await nextTaskStep(nextStep, task, true);
-      throw new Error(
-        `Aucune valeur fournie pour ${name}. p.id: ${person["e id"]}`
-      );
+      throw new Error(`Aucune valeur fournie pour ${name}. p.id: ${person["e id"]}`);
     }
 
     /** @type {NodeListOf<HTMLTableElement>} */
@@ -2115,9 +1939,7 @@ const locale = window.locale;
       const table = tables[tableIndex];
 
       /** @type {NodeListOf<HTMLTableRowElement>} */
-      const TRList = table.querySelectorAll(
-        "table > thead > tr, table > tbody > tr"
-      );
+      const TRList = table.querySelectorAll("table > thead > tr, table > tbody > tr");
       const TRs = [...TRList];
 
       const nameTR = tableIndex === 0 ? TRs[1] : TRs[0];
@@ -2127,14 +1949,11 @@ const locale = window.locale;
       const dataTR = tableIndex === 0 ? TRs[2] : TRs[1];
 
       // @ts-ignore element type specified in the query
-      select =
-        dataTR?.querySelector("td > span > select.inputNoWidth") ?? undefined;
+      select = dataTR?.querySelector("td > span > select.inputNoWidth") ?? undefined;
       // @ts-ignore element type specified in the query
       saveButton = dataTR?.querySelector("td > button.link") ?? undefined;
       if (
-        !saveButton
-          ?.getAttribute("onclick")
-          ?.includes("javascript:saveEntry('KlassifizierungForm'")
+        !saveButton?.getAttribute("onclick")?.includes("javascript:saveEntry('KlassifizierungForm'")
       )
         throw new Error("Imposteur de bouton de sauvegarde (btn pas trouvé)");
 
@@ -2155,22 +1974,15 @@ const locale = window.locale;
       //Ask to overwrite
       if (
         task.sharedData.existingDataStrategy === "ask" &&
-        !confirm(
-          `${name} déjà renseigné.\nSouhaitez vous l'écraser?\n` +
-            `Valeur: '${value}'`
-        )
+        !confirm(`${name} déjà renseigné.\nSouhaitez vous l'écraser?\n` + `Valeur: '${value}'`)
       ) {
-        alert(
-          `Vérifiez/renseignez le collège, enregistrez puis continuez la tâche.`
-        );
+        alert(`Vérifiez/renseignez le collège, enregistrez puis continuez la tâche.`);
         task = await nextTaskStep(nextStep, task, true);
         throw new Warning(`Vérifier/Renseigner manuellement ${name}`);
       }
       //Skip to next step
       else if (task.sharedData.existingDataStrategy === "skip") {
-        console.info(
-          "skipping to next step according to existingData strategy"
-        );
+        console.info("skipping to next step according to existingData strategy");
         task = await nextTaskStep(nextStep, task, true);
         return;
       }
@@ -2178,11 +1990,7 @@ const locale = window.locale;
 
     //find matching name
     const optionsToSelect = [...select.options].filter((op) =>
-      op.textContent
-        ?.trim()
-        .split("''")
-        .join("'")
-        .includes(value.trim().split("''").join("'"))
+      op.textContent?.trim().split("''").join("'").includes(value.trim().split("''").join("'"))
     );
 
     let resIndexChosen = 1;
@@ -2192,9 +2000,7 @@ const locale = window.locale;
           `Veuillez choisir la bonne valeur pour '${name}'.\n\n` +
             `Valeur cherchée: '${value}'\n` +
             `Personne: ${person["e prenom"]} ${person["e nom"]} [${person["e id"]}]\n\n` +
-            optionsToSelect
-              .map((o, i) => `[${i + 1}] ${o.textContent?.trim()}`)
-              .join("\n"),
+            optionsToSelect.map((o, i) => `[${i + 1}] ${o.textContent?.trim()}`).join("\n"),
           resIndexChosen.toString()
         );
         if (txtRes === null) {
@@ -2203,9 +2009,7 @@ const locale = window.locale;
               `Personne: [${person["e id"]}] ${person["e prenom"]} ${person["e nom"]}`
           );
           task = await nextTaskStep(nextStep, task, true);
-          throw new Warning(
-            `Entrer manuellement: ${name}: "${value}". p.id: ${person["e id"]}`
-          );
+          throw new Warning(`Entrer manuellement: ${name}: "${value}". p.id: ${person["e id"]}`);
         }
         resIndexChosen = parseInt(txtRes);
       } while (
@@ -2260,10 +2064,7 @@ const locale = window.locale;
   window.getCurrentTask = getCurrentTask;
 
   async function removeCurrentTask() {
-    await Promise.all([
-      localforage.removeItem("LTCurrentTask"),
-      removeHeavyData(),
-    ]);
+    await Promise.all([localforage.removeItem("LTCurrentTask"), removeHeavyData()]);
     refreshTaskWindow(null);
   }
 
@@ -2285,9 +2086,7 @@ const locale = window.locale;
    */
   async function setNewTask(name, sharedData, heavyData, description) {
     if (await getCurrentTask()) {
-      alert(
-        "Impossible de démarrer une nouvelle tâche. Une tâche est déjà en cours."
-      );
+      alert("Impossible de démarrer une nouvelle tâche. Une tâche est déjà en cours.");
       throw new Error("a task is already running");
     }
 
@@ -2325,8 +2124,7 @@ const locale = window.locale;
     // }
     task = { ...task, stepName, stepStartedAt: Date.now() };
 
-    if (STEP_BY_STEP)
-      task = { ...task, isPaused: true, lastMessage: "Step by step..." };
+    if (STEP_BY_STEP) task = { ...task, isPaused: true, lastMessage: "Step by step..." };
 
     task = await setCurrentTask(task);
 
@@ -2373,11 +2171,7 @@ const locale = window.locale;
       if (promptRes === null && allowNull) return null;
 
       chosenIndex = parseInt(promptRes ?? "") - 1;
-    } while (
-      isNaN(chosenIndex) ||
-      chosenIndex < 0 ||
-      chosenIndex >= choices.length
-    );
+    } while (isNaN(chosenIndex) || chosenIndex < 0 || chosenIndex >= choices.length);
     return chosenIndex;
   }
 
@@ -2389,10 +2183,7 @@ const locale = window.locale;
   function waitForSelector(selector, checkInterval = 100, maxChecks = 50) {
     /** @type {T | null} */
     // @ts-ignore because all html elements inherit from HTMLElement anyways
-    const res =
-      typeof selector === "function"
-        ? selector()
-        : document.querySelector(selector);
+    const res = typeof selector === "function" ? selector() : document.querySelector(selector);
 
     return new Promise((resolve, reject) => {
       if (res === null) {
@@ -2428,8 +2219,7 @@ const locale = window.locale;
           return;
         }
         setTimeout(
-          () =>
-            waitForValue(getter, checkInterval, maxChecks - 1).then(resolve),
+          () => waitForValue(getter, checkInterval, maxChecks - 1).then(resolve),
           checkInterval
         );
       } else {
@@ -2442,17 +2232,9 @@ const locale = window.locale;
    * @param minCount minimum count of returned elements
    * @return {Promise<NodeListOf<Element>>}
    */
-  function waitForSelectorAll(
-    selector,
-    minCount = 1,
-    checkInterval = 100,
-    maxChecks = 50
-  ) {
+  function waitForSelectorAll(selector, minCount = 1, checkInterval = 100, maxChecks = 50) {
     console.log("waitForSelectorAll", maxChecks);
-    const res =
-      typeof selector === "function"
-        ? selector()
-        : document.querySelectorAll(selector);
+    const res = typeof selector === "function" ? selector() : document.querySelectorAll(selector);
 
     return new Promise((resolve, reject) => {
       if (res.length < minCount) {

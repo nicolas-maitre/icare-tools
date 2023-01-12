@@ -1,3 +1,4 @@
+import { WindowApplyPercentFacturation } from "../components/WindowApplyPercentFacturation";
 import { Warning } from "../lib/errors";
 import { IcareWindow } from "../lib/icareTypes";
 import { nextTaskStep, removeCurrentTask, Task, TaskParams } from "../lib/task";
@@ -299,4 +300,5 @@ function getFacInputs(parent: Element) {
 
 export const applyPercentFacturationTaskParams: TaskParams = {
   taskFn: applyPercentFacturationTaskFn,
+  windowSectionComponent: WindowApplyPercentFacturation,
 };

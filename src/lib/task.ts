@@ -4,6 +4,7 @@ import { addOtherPrestTaskParams } from "../tasks/addOtherPrests";
 import { applyPercentFacturationTaskParams } from "../tasks/applyPercentFacturation";
 import { fillContractClassesTaskParams } from "../tasks/fillContractClasses";
 import { goToContractsTaskParams } from "../tasks/goToContracts";
+import { removeDACPrestTaskParams } from "../tasks/removeDACPrest";
 import { testTaskParams } from "../tasks/test";
 import { Warning } from "./errors";
 import { IcareWindow } from "./icareTypes";
@@ -23,6 +24,7 @@ export type Task = {
 export type TaskParams = {
   taskFn: (task: Task) => Promise<void>;
   actionsElems?: Element[];
+  windowSectionComponent?: () => Element;
 };
 
 export const taskMap = {
@@ -31,6 +33,7 @@ export const taskMap = {
   applyPercentFacturation: applyPercentFacturationTaskParams,
   goToContracts: goToContractsTaskParams,
   addOtherPrest: addOtherPrestTaskParams,
+  removeDACPrest: removeDACPrestTaskParams,
 } satisfies Record<string, TaskParams>;
 
 // CONFIG

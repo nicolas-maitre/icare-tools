@@ -3,9 +3,10 @@ import { setNewTask } from "../lib/task";
 import { BindRef, createElem, promptIndex } from "../lib/UITools";
 import { namedLog, objectContainsKeys } from "../lib/utils";
 import { AddOtherPrestContract, AddOtherPrestSharedData } from "../tasks/addOtherPrests";
+import { RemoveDACPrestSharedData } from "../tasks/removeDACPrest";
 import { hideWindow } from "./ToolsWindow";
 
-export function WindowAddOtherPrestSection() {
+export function WindowRemoveDACPrestSection() {
   const submitButtonRef: BindRef<HTMLButtonElement> = {};
   const formRef: BindRef<HTMLFormElement> = {};
 
@@ -55,14 +56,18 @@ export function WindowAddOtherPrestSection() {
       XLSXUtils.sheet_to_json(wrongContractsSheet);
     if (
       !Array.isArray(wrongContractsJSON) ||
-      !objectContainsKeys(wrongContractsJSON[0], ["c ID"])
+      !objectContainsKeys(wrongContractsJSON[0], ["c ID", "institution id", "pp id"])
     ) {
       submitButtonRef.current.disabled = false;
       alert("Le fichier de contrats est vide ou corrompu. Veuillez réessayer.");
       return;
     }
 
-    const contractsById = Object.fromEntries(wrongContractsJSON.map((wc) => [wc["c ID"], wc]));
+    const contractsById = Object.fromEntries(
+      wrongContractsJSON
+        .filter((c) => (c["Facturation DAC à supprimer"] ?? 0) > 0)
+        .map((wc) => [wc["c ID"], wc])
+    );
 
     namedLog({ wrongContractsJSON, contractsById });
 
@@ -71,13 +76,14 @@ export function WindowAddOtherPrestSection() {
       .sort((a, b) => a - b);
     // .slice(127); //debug
 
-    const taskData: AddOtherPrestSharedData = {
+    const taskData: RemoveDACPrestSharedData = {
       contracts: contractsById,
       contractIds: contractsIdsToHandle,
       doneContracts: [],
+      strangeContracts: [],
     };
 
-    setNewTask("addOtherPrest", taskData, undefined, "Remplissage des contrats sans classe.");
+    setNewTask("removeDACPrest", taskData, undefined, "Supression des 'autres prestations' DAC");
 
     hideWindow();
     submitButtonRef.current.disabled = false;
@@ -86,7 +92,7 @@ export function WindowAddOtherPrestSection() {
   return createElem(
     "p",
     null,
-    createElem("h3", null, "Ajout automatique des 'autres prestations' 'Aide individuelle'"),
+    createElem("h3", null, "Supression des 'autres prestations' DAC et facturation"),
     createElem(
       "form",
       {
@@ -104,7 +110,7 @@ export function WindowAddOtherPrestSection() {
       createElem(
         "label",
         { htmlFor: "inputWrongContracts" },
-        "Feuille Excel avec les contrats incomplèts (c ID)"
+        "Feuille Excel avec les contrats incorrects (c ID)"
       ),
       createElem("input", {
         name: "wrongContracts",

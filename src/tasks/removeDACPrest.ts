@@ -1,4 +1,4 @@
-import { WindowAddOtherPrestSection } from "../components/WindowAddOtherPrestSection";
+import { WindowRemoveDACPrestSection } from "../components/WindowRemoveDACPrestSection";
 import { async_setTimeout, waitForSelector } from "../lib/async";
 import { IcareWindow } from "../lib/icareTypes";
 import { getCurrentTask, nextTaskStep, removeCurrentTask, Task, TaskParams } from "../lib/task";
@@ -6,26 +6,24 @@ import { createElem } from "../lib/UITools";
 import { urlCheck, urlCheckOrGo } from "../lib/url";
 import { namedLog } from "../lib/utils";
 
-export type AddOtherPrestContract = {
+export type RemoveDACPrestContract = {
   "c ID": number;
-  "institution id": number;
-  "pp id": number;
-  "Facturation DAC à supprimer"?: number;
 };
 
-export type AddOtherPrestSharedData = {
+export type RemoveDACPrestSharedData = {
   contracts: {
-    [id: number]: AddOtherPrestContract;
+    [id: number]: RemoveDACPrestContract;
   };
   contractIds: number[];
-  doneContracts: AddOtherPrestContract[];
+  doneContracts: RemoveDACPrestContract[];
+  strangeContracts: RemoveDACPrestContract[];
 };
 
-export type AddOtherPrestTask = Omit<Task, "sharedData"> & {
-  sharedData: AddOtherPrestSharedData;
+export type RemoveDACPrestTask = Omit<Task, "sharedData"> & {
+  sharedData: RemoveDACPrestSharedData;
 };
 
-async function addOtherPrestTask(task: AddOtherPrestTask) {
+async function removeDACPrestTask(task: RemoveDACPrestTask) {
   if ((window as IcareWindow).HAS_ICARE_HELPERS_LOADED) {
     alert(
       "Cette tâche ne peut pas fonctionner quand le script 'icare-helpers' est chargé. Désactivez le d'abord."
@@ -69,15 +67,15 @@ async function addOtherPrestTask(task: AddOtherPrestTask) {
       const confirmBox = document.querySelector<HTMLInputElement>("#trotzdem");
       if (confirmBox) {
         //confirm page
-        await nextTaskStep("addPrestation", task, true);
+        await nextTaskStep("removePrestation", task, true);
         confirmBox.checked = true;
         confirmBox.form?.submit();
         return;
       }
-      nextTaskStep("addPrestation", task);
+      nextTaskStep("removePrestation", task);
       return;
     }
-    case "addPrestation": {
+    case "removePrestation": {
       //check page, I don't check the contract id because I don't have all day. may cause issues in the future ¯\_(ツ)_/¯
       if (!urlCheck(`/icare/Be/VertragEdit.do`)) {
         return;
@@ -87,33 +85,8 @@ async function addOtherPrestTask(task: AddOtherPrestTask) {
       const tabTitle: HTMLElement = await waitForSelector("#ui-id-9");
       tabTitle.click();
 
-      //show prest form
-      const newPrestSelect: HTMLSelectElement = await waitForSelector(
-        "#ui-id-10 form[name=PlatzierungNewForm] #al-platzierungstyp-new"
-      );
-      newPrestSelect.value = "1282"; //Aide individuelle B (125.-)
-      newPrestSelect.onchange?.call(newPrestSelect, {} as Event); //the event handler doesn't use the event parameter
-
-      const newPrestForm: HTMLFormElement = await waitForSelector("#ui-id-10 form#al-form");
-      await async_setTimeout(100); //to allow the form to load
-
-      //set start date
-      const startDateInput: HTMLInputElement = await waitForSelector(() =>
-        newPrestForm.querySelector("#al-beginn")
-      );
-      startDateInput.value = "01.11.2022";
-
-      //set end date
-      const endDateInput: HTMLInputElement = await waitForSelector(() =>
-        newPrestForm.querySelector("#al-ende")
-      );
-      endDateInput.value = "30.11.2022";
-
-      //click on save
-      const saveButton: HTMLButtonElement = await waitForSelector(() =>
-        newPrestForm.querySelector("button[type=submit].btn-success")
-      );
-      saveButton.click();
+      //TODO: remove prestation
+      throw new Error("TODO not implemented");
 
       //wait for success message
       try {
@@ -132,7 +105,7 @@ async function addOtherPrestTask(task: AddOtherPrestTask) {
       return;
     }
     case "endOfLoop": {
-      const newTask: AddOtherPrestTask = {
+      const newTask: RemoveDACPrestTask = {
         ...task,
         sharedData: {
           ...task.sharedData,
@@ -149,15 +122,19 @@ async function addOtherPrestTask(task: AddOtherPrestTask) {
     case "success": {
       alert("Tâche terminée!");
       console.log("contrats terminés", task.sharedData.doneContracts);
+      console.log("contrats ignorés", task.sharedData.strangeContracts);
       await removeCurrentTask();
       return;
+    }
+    default: {
+      throw new Error(`étape ${task.stepName} inconnue`);
     }
   }
 }
 
-export const addOtherPrestTaskParams: TaskParams = {
-  taskFn: addOtherPrestTask,
-  windowSectionComponent: WindowAddOtherPrestSection,
+export const removeDACPrestTaskParams: TaskParams = {
+  taskFn: removeDACPrestTask,
+  windowSectionComponent: WindowRemoveDACPrestSection,
   actionsElems: [
     createElem(
       "button",

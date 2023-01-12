@@ -1,3 +1,4 @@
+import { taskMap } from "../lib/task";
 import { BindRef, createElem } from "../lib/UITools";
 import { WindowAddOtherPrestSection } from "./WindowAddOtherPrestSection";
 import { WindowApplyPercentFacturation } from "./WindowApplyPercentFacturation";
@@ -42,10 +43,9 @@ export function ToolWindow(ref: BindRef<HTMLDivElement>, frontDivRef: BindRef<HT
       createElem("h2", null, "Outils"),
       createElem("button", { onclick: hideWindow }, "X")
     ),
-    WindowFillContractsClassesSection(),
-    WindowApplyPercentFacturation(),
-    WindowAddOtherPrestSection()
-    // WindowTestSection(),
+    ...Object.values(taskMap).flatMap(({ windowSectionComponent }) =>
+      windowSectionComponent ? [windowSectionComponent()] : []
+    )
   );
 }
 
