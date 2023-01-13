@@ -6,14 +6,15 @@ export function async_setTimeout(ms: number): Promise<void> {
   return new Promise((res) => setTimeout(res, ms));
 }
 
-export function waitForSelector<T extends HTMLElement>(
-  selector: string | (() => T | null),
+export async function waitForSelector<T extends HTMLElement>(
+  selector: string | (() => T | null) | (() => Promise<T | null>),
   checkInterval = 100,
   maxChecks = 50
 ): Promise<T> {
-  const res = typeof selector === "function" ? selector() : document.querySelector<T>(selector);
+  const res =
+    typeof selector === "function" ? await selector() : document.querySelector<T>(selector);
 
-  return new Promise((resolve, reject) => {
+  return await new Promise((resolve, reject) => {
     if (res === null) {
       if (maxChecks <= 0) {
         reject(new Error(`can't find element ${selector.toString()}`));
@@ -35,7 +36,7 @@ export function waitForSelector<T extends HTMLElement>(
 export async function waitForValue<T>(
   getter: () => (T | undefined) | Promise<T | undefined>,
   checkInterval = 100,
-  maxChecks = 50
+  maxChecks = 50 //~5 seconds
 ): Promise<T | undefined> {
   const res = await getter();
   return new Promise((resolve) => {
@@ -54,14 +55,14 @@ export async function waitForValue<T>(
   });
 }
 
-export function waitForSelectorAll(
-  selector: string | (() => NodeListOf<Element>),
+export function waitForSelectorAll<T extends HTMLElement>(
+  selector: string | (() => NodeListOf<T>),
   minCount = 1,
   checkInterval = 100,
   maxChecks = 50
-): Promise<NodeListOf<Element>> {
+): Promise<NodeListOf<T>> {
   console.log("waitForSelectorAll", maxChecks);
-  const res = typeof selector === "function" ? selector() : document.querySelectorAll(selector);
+  const res = typeof selector === "function" ? selector() : document.querySelectorAll<T>(selector);
 
   return new Promise((resolve, reject) => {
     if (res.length < minCount) {
