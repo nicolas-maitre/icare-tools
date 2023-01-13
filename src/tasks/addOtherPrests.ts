@@ -8,9 +8,6 @@ import { namedLog } from "../lib/utils";
 
 export type AddOtherPrestContract = {
   "c ID": number;
-  "institution id": number;
-  "pp id": number;
-  "Facturation DAC à supprimer"?: number;
 };
 
 export type AddOtherPrestSharedData = {
@@ -98,20 +95,20 @@ async function addOtherPrestTask(task: AddOtherPrestTask) {
       await async_setTimeout(100); //to allow the form to load
 
       //set start date
-      const startDateInput: HTMLInputElement = await waitForSelector(() =>
-        newPrestForm.querySelector("#al-beginn")
+      const startDateInput = await waitForSelector(() =>
+        newPrestForm.querySelector<HTMLInputElement>("#al-beginn")
       );
       startDateInput.value = "01.11.2022";
 
       //set end date
-      const endDateInput: HTMLInputElement = await waitForSelector(() =>
-        newPrestForm.querySelector("#al-ende")
+      const endDateInput = await waitForSelector(() =>
+        newPrestForm.querySelector<HTMLInputElement>("#al-ende")
       );
       endDateInput.value = "30.11.2022";
 
       //click on save
-      const saveButton: HTMLButtonElement = await waitForSelector(() =>
-        newPrestForm.querySelector("button[type=submit].btn-success")
+      const saveButton = await waitForSelector(() =>
+        newPrestForm.querySelector<HTMLInputElement>("button[type=submit].btn-success")
       );
       saveButton.click();
 

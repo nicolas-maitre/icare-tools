@@ -2,8 +2,7 @@ import { read as readXLSX, utils as XLSXUtils } from "xlsx";
 import { setNewTask } from "../lib/task";
 import { BindRef, createElem, promptIndex } from "../lib/UITools";
 import { namedLog, objectContainsKeys } from "../lib/utils";
-import { AddOtherPrestContract, AddOtherPrestSharedData } from "../tasks/addOtherPrests";
-import { RemoveDACPrestSharedData } from "../tasks/removeDACPrest";
+import { RemoveDACPrestContract, RemoveDACPrestSharedData } from "../tasks/removeDACPrest";
 import { hideWindow } from "./ToolsWindow";
 
 export function WindowRemoveDACPrestSection() {
@@ -52,7 +51,7 @@ export function WindowRemoveDACPrestSection() {
     const wrongContractsSheet =
       wrongContractsWorkbook.Sheets[wrongContractsWorkbook.SheetNames[selectedWrongContractsSheet]];
 
-    const wrongContractsJSON: AddOtherPrestContract[] =
+    const wrongContractsJSON: RemoveDACPrestContract[] =
       XLSXUtils.sheet_to_json(wrongContractsSheet);
     if (
       !Array.isArray(wrongContractsJSON) ||
