@@ -17,13 +17,27 @@
 // @ts-ignore that's the goal
 window.HAS_ICARE_HELPERS_LOADED = true;
 
+///-----------
+///CONFIG
+///-----------
+
 const AUTO_PERSON = true;
 // const AUTO_PERSON = false;
+
 // const AUTO_CONTRACT = true;
 const AUTO_CONTRACT = false;
+
+// const AUTO_TAB = false;
 const AUTO_TAB = "prestations";
 // const AUTO_TAB = "imprimer";
-(() => {
+
+// const AUTO_FOCUS_PERSON_SEARCH = false;
+// const AUTO_FOCUS_PERSON_SEARCH = "id";
+const AUTO_FOCUS_PERSON_SEARCH = "name";
+// const AUTO_FOCUS_PERSON_SEARCH = "birthday";
+// const AUTO_FOCUS_PERSON_SEARCH = "chnum";
+
+try {
   console.info("Icare helper init");
 
   const style = document.createElement("style");
@@ -47,32 +61,33 @@ const AUTO_TAB = "prestations";
     //reset
     if (new URLSearchParams(document.location.search).get("reset") === "true") {
       /** @type {HTMLButtonElement | null} */
-      const resetBtn = document.querySelector(
-        "#filterForm button.btn-danger[onclick]"
-      );
+      const resetBtn = document.querySelector("#filterForm button.btn-danger[onclick]");
       resetBtn?.click();
     }
 
-    /** @type {HTMLInputElement | null} */
-
-    // const elem = document.querySelector("#personentyp[name=perId]"); //id input
-
-    const elem = document.querySelector("#geburtsdatum[name=geburtsdatum]"); //date input
-    elem.value = ""; //reset
-
-    // 	const elem = document.querySelector("#perEinwohner[name=perEinwohner]") //chnum input
-
-    // const elem = document.querySelector("#name[name=name]") //name input
-
-    elem.focus();
-    elem.select();
+    if (AUTO_FOCUS_PERSON_SEARCH) {
+      /** @type {HTMLInputElement | null} */
+      const elem = document.querySelector(
+        AUTO_FOCUS_PERSON_SEARCH === "id"
+          ? "#personentyp[name=perId]"
+          : AUTO_FOCUS_PERSON_SEARCH === "birthday"
+          ? "#geburtsdatum[name=geburtsdatum]"
+          : AUTO_FOCUS_PERSON_SEARCH === "chnum"
+          ? "#perEinwohner[name=perEinwohner]"
+          : AUTO_FOCUS_PERSON_SEARCH === "name"
+          ? "#name[name=name]"
+          : undefined
+      );
+      elem?.focus();
+      elem?.select();
+    }
 
     //click on first person if only one found
-    const links = [...document.querySelectorAll("a")].filter((e) =>
-      e.href.includes("/icare/Be/PersonEdit.do?method=show&perEdit=")
-    );
-    if (AUTO_PERSON && links.length <= 2) {
-      links[0]?.click();
+    const peopleRows = document.querySelectorAll("#per.dataTable.jqResultList > tbody > tr");
+    console.log({peopleRows});
+    if (AUTO_PERSON && peopleRows.length === 1) {
+      const link = peopleRows[0].querySelector("td.link[style='width: 200px;'] a");
+      link?.click();
     }
   }
 
@@ -111,9 +126,7 @@ const AUTO_TAB = "prestations";
       if (!confirm("Tout cocher?")) return;
 
       /** @type {Record<string, boolean>} */
-      const ids = JSON.parse(
-        localStorage.getItem("contractIdsHighlight") ?? "{}"
-      );
+      const ids = JSON.parse(localStorage.getItem("contractIdsHighlight") ?? "{}");
       TRs.forEach((tr) => (ids[getTrData(tr).name] = true));
       localStorage.setItem("contractIdsHighlight", JSON.stringify(ids));
       updateHighlight();
@@ -129,9 +142,7 @@ const AUTO_TAB = "prestations";
      */
     function updateHighlight(name, val) {
       /** @type {Record<string, boolean>} */
-      const ids = JSON.parse(
-        localStorage.getItem("contractIdsHighlight") ?? "{}"
-      );
+      const ids = JSON.parse(localStorage.getItem("contractIdsHighlight") ?? "{}");
       if (name && val !== undefined) {
         ids[name] = val;
         localStorage.setItem("contractIdsHighlight", JSON.stringify(ids));
@@ -190,33 +201,19 @@ const AUTO_TAB = "prestations";
 
     if (AUTO_TAB) {
       (async () => {
-        const tab_id =
-          AUTO_TAB === "prestations"
-            ? 7
-            : AUTO_TAB === "imprimer"
-            ? 11
-            : undefined;
+        const tab_id = AUTO_TAB === "prestations" ? 7 : AUTO_TAB === "imprimer" ? 11 : undefined;
         if (tab_id === undefined) return;
         /** @type {HTMLAnchorElement} */
-        const tabLink = await waitForSelector(
-          `ul > li[role=tab] > a#ui-id-${tab_id}`,
-          250
-        );
+        const tabLink = await waitForSelector(`ul > li[role=tab] > a#ui-id-${tab_id}`, 250);
         tabLink?.click();
       })();
     }
 
     (async () => {
       /** @type {HTMLInputElement} */
-      const previewDateInput = await waitForSelector(
-        "#plgOverviewStichdatum",
-        250,
-        Infinity
-      );
+      const previewDateInput = await waitForSelector("#plgOverviewStichdatum", 250, Infinity);
 
-      const firstMondayDate = new Date(
-        previewDateInput.value.split(".").reverse().join("-")
-      );
+      const firstMondayDate = new Date(previewDateInput.value.split(".").reverse().join("-"));
       while (firstMondayDate.getDay() !== 1) {
         firstMondayDate.setDate(firstMondayDate.getDate() + 1);
       }
@@ -253,7 +250,9 @@ const AUTO_TAB = "prestations";
   }
 
   console.info("Icare helper success");
-})();
+}catch(e){
+  console.error("icare helper error", e);
+}
 
 /*const contrats = [...document.querySelectorAll("a")].filter((e)=>e.href.includes("Be/VertragEdit.do?method=main&aktuelle=true&theVerId="))
 
@@ -271,10 +270,7 @@ if(contrats.length == 1){
 function waitForSelector(selector, checkInterval = 100, maxChecks = 50) {
   /** @type {T | null} */
   // @ts-ignore because all html elements inherit from HTMLElement anyways
-  const res =
-    typeof selector === "function"
-      ? selector()
-      : document.querySelector(selector);
+  const res = typeof selector === "function" ? selector() : document.querySelector(selector);
 
   return new Promise((resolve, reject) => {
     if (res === null) {
