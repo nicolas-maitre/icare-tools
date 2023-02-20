@@ -2,6 +2,7 @@ import localforage from "localforage";
 import { refreshTaskWindow } from "../components/TaskWindow";
 import { addOtherPrestTaskParams } from "../tasks/addOtherPrests";
 import { applyPercentFacturationTaskParams } from "../tasks/applyPercentFacturation";
+import { changeMotiveTaskParams } from "../tasks/changeMotive";
 import { fillContractClassesTaskParams } from "../tasks/fillContractClasses";
 import { goToContractsTaskParams } from "../tasks/goToContracts";
 import { removeDACPrestTaskParams } from "../tasks/removeDACPrest";
@@ -24,7 +25,7 @@ export type Task = {
 export type TaskParams = {
   taskFn: (task: Task) => Promise<void>;
   actionsElems?: Element[];
-  windowSectionComponent?: () => Element;
+  windowSectionComponent?(): Element;
 };
 
 export const taskMap = {
@@ -34,6 +35,7 @@ export const taskMap = {
   goToContracts: goToContractsTaskParams,
   addOtherPrest: addOtherPrestTaskParams,
   removeDACPrest: removeDACPrestTaskParams,
+  changeMotive: changeMotiveTaskParams,
 } satisfies Record<string, TaskParams>;
 
 // CONFIG

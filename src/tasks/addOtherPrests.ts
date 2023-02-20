@@ -1,5 +1,6 @@
 import { WindowAddOtherPrestSection } from "../components/WindowAddOtherPrestSection";
 import { async_setTimeout, waitForSelector } from "../lib/async";
+import { errorIfIcareTools } from "../lib/checks";
 import { IcareWindow } from "../lib/icareTypes";
 import { getCurrentTask, nextTaskStep, removeCurrentTask, Task, TaskParams } from "../lib/task";
 import { createElem } from "../lib/UITools";
@@ -23,12 +24,7 @@ export type AddOtherPrestTask = Omit<Task, "sharedData"> & {
 };
 
 async function addOtherPrestTask(task: AddOtherPrestTask) {
-  if ((window as IcareWindow).HAS_ICARE_HELPERS_LOADED) {
-    alert(
-      "Cette tâche ne peut pas fonctionner quand le script 'icare-helpers' est chargé. Désactivez le d'abord."
-    );
-    throw new Error("Cette tâche ne supporte pas le script 'icare-helpers'");
-  }
+  errorIfIcareTools();
 
   const currentContractId = task.sharedData.contractIds[0];
   const currentContract = currentContractId
@@ -128,6 +124,7 @@ async function addOtherPrestTask(task: AddOtherPrestTask) {
 
       return;
     }
+
     case "endOfLoop": {
       const newTask: AddOtherPrestTask = {
         ...task,

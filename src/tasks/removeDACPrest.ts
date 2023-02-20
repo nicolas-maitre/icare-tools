@@ -77,6 +77,7 @@ async function removeDACPrestTask(task: RemoveDACPrestTask) {
 
       return;
     }
+
     case "goToContract": {
       //go to contract url
       if (
@@ -96,8 +97,10 @@ async function removeDACPrestTask(task: RemoveDACPrestTask) {
         return;
       }
       nextTaskStep("removePrestation", task);
+
       return;
     }
+
     case "removePrestation": {
       //check page, I don't check the contract id because I don't have all day. may cause issues in the future ¯\_(ツ)_/¯
       if (!urlCheck(`/icare/Be/VertragEdit.do`)) {
