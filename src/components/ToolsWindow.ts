@@ -1,8 +1,5 @@
 import { taskMap } from "../lib/task";
 import { BindRef, createElem } from "../lib/UITools";
-import { WindowAddOtherPrestSection } from "./WindowAddOtherPrestSection";
-import { WindowApplyPercentFacturation } from "./WindowApplyPercentFacturation";
-import { WindowFillContractsClassesSection } from "./WindowFillContractsClassesSection";
 
 let _frontDivRef: BindRef<HTMLDivElement> = {};
 let _toolWindowRef: BindRef<HTMLDivElement> = {};
