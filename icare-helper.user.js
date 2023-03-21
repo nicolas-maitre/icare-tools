@@ -27,16 +27,17 @@ const AUTO_PERSON = true;
 // const AUTO_CONTRACT = true;
 const AUTO_CONTRACT = false;
 
-// const AUTO_TAB = false;
-const AUTO_TAB = "prestations";
+const AUTO_TAB = false;
+// const AUTO_TAB = "prestations";
 // const AUTO_TAB = "imprimer";
 
 // const AUTO_FOCUS_PERSON_SEARCH = false;
 // const AUTO_FOCUS_PERSON_SEARCH = "id";
-const AUTO_FOCUS_PERSON_SEARCH = "name";
-// const AUTO_FOCUS_PERSON_SEARCH = "birthday";
+// const AUTO_FOCUS_PERSON_SEARCH = "name";
+const AUTO_FOCUS_PERSON_SEARCH = "birthday";
 // const AUTO_FOCUS_PERSON_SEARCH = "chnum";
 
+const START_DATE = "21.08.2023";
 try {
   console.info("Icare helper init");
 
@@ -84,7 +85,7 @@ try {
 
     //click on first person if only one found
     const peopleRows = document.querySelectorAll("#per.dataTable.jqResultList > tbody > tr");
-    console.log({peopleRows});
+    console.log({ peopleRows });
     if (AUTO_PERSON && peopleRows.length === 1) {
       const link = peopleRows[0].querySelector("td.link[style='width: 200px;'] a");
       link?.click();
@@ -93,9 +94,22 @@ try {
 
   //CREATE CONTRACT PAGE
   if (window.location.href.includes("WartelisteToPlatzierungOpen")) {
-    //date
-    // document.querySelector("#dateBeginn").value = "01.11.2022";
-    document.querySelector("#dateBeginn").value = "22.08.2022";
+    /** @type {HTMLInputElement | null} */
+    const startDateInput = document.querySelector("#dateBeginn");
+    if (startDateInput) {
+      startDateInput.value = START_DATE;
+      startDateInput.focus();
+    }
+  }
+
+  //COPY CONTRACT PAGE
+  if (window.location.href.includes("PlatzierungVertragKopierenPrepare.do?action=prepare&verId=")) {
+    /** @type {HTMLInputElement | null} */
+    const startDateInput = document.querySelector("#verBeginn");
+    if (startDateInput) {
+      startDateInput.value = START_DATE;
+      startDateInput.focus();
+    }
   }
 
   //PERSON PAGE
@@ -189,6 +203,7 @@ try {
   }
 
   if (window.location.href.includes("VertragEdit.do")) {
+    //should add kopieren
     //skip confirmation
     (() => {
       /** @type {HTMLInputElement | null} */
@@ -250,7 +265,7 @@ try {
   }
 
   console.info("Icare helper success");
-}catch(e){
+} catch (e) {
   console.error("icare helper error", e);
 }
 
