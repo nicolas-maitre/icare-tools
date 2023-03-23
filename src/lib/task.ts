@@ -1,6 +1,7 @@
 import localforage from "localforage";
 import { refreshTaskWindow } from "../components/TaskWindow";
 import { addOtherPrestTaskParams } from "../tasks/addOtherPrests";
+import { applyContractTaskParams } from "../tasks/applyContract";
 import { applyPercentFacturationTaskParams } from "../tasks/applyPercentFacturation";
 import { changeMotiveTaskParams } from "../tasks/changeMotive";
 import { fillContractClassesTaskParams } from "../tasks/fillContractClasses";
@@ -29,6 +30,7 @@ export type TaskParams = {
 };
 
 export const taskMap = {
+  applyContract: applyContractTaskParams,
   test: testTaskParams,
   fillContractClasses: fillContractClassesTaskParams,
   applyPercentFacturation: applyPercentFacturationTaskParams,

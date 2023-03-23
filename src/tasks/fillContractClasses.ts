@@ -1,5 +1,4 @@
 import localforage from "localforage";
-import { WindowApplyPercentFacturation } from "../components/WindowApplyPercentFacturation";
 import { WindowFillContractsClassesSection } from "../components/WindowFillContractsClassesSection";
 import { waitForSelector, waitForValue } from "../lib/async";
 import { Warning } from "../lib/errors";

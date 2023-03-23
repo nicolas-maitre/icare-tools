@@ -19,7 +19,7 @@ import { urlCheck } from "./lib/url";
 //add tools button to top bar
 buildToolsButtonIntegration();
 //add contract button to person page
-if (urlCheck("/icare/Be/PersonEdit.do")) {
+if (urlCheck(["/icare/Be/PersonEdit.do", "/icare/Be/KindEdit.do"])) {
   buildGoToContractButtonIntegration();
 }
 
