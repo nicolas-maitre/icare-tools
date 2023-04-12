@@ -202,7 +202,11 @@ try {
     updateHighlight();
   }
 
-  if (window.location.href.includes("VertragEdit.do")) {
+  //CONTRACT PAGE
+  if (
+    window.location.href.includes("VertragEdit.do") ||
+    window.location.href.includes("PlatzierungVertragKopieren.do")
+  ) {
     //should add kopieren
     //skip confirmation
     (() => {
@@ -224,6 +228,17 @@ try {
       })();
     }
 
+    //highlight wrong date
+    (async () => {
+      const startDateElem = await waitForSelector(
+        "#jqContentTable > tbody > tr > td > div#data > table > tbody > tr > td > b"
+      );
+      if (startDateElem.textContent !== START_DATE) {
+        startDateElem.style.backgroundColor = "yellow";
+      }
+    })();
+
+    //preview date
     (async () => {
       /** @type {HTMLInputElement} */
       const previewDateInput = await waitForSelector("#plgOverviewStichdatum", 250, Infinity);
