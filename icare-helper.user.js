@@ -98,8 +98,11 @@ try {
     const startDateInput = document.querySelector("#dateBeginn");
     if (startDateInput) {
       startDateInput.value = START_DATE;
-      startDateInput.focus();
     }
+
+    /** @type {HTMLSelectElement | null} */
+    const clientGroupSelect = document.querySelector("select#platzKundengruppe");
+    clientGroupSelect?.focus();
   }
 
   //COPY CONTRACT PAGE
