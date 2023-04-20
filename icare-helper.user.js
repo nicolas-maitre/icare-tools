@@ -10,8 +10,6 @@
 // @version     1.0
 // @author      Nicolas Maitre
 // @description some helpers to make life easier on icare
-// @require     https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js
-// @require     https://unpkg.com/localforage@1.10.0/dist/localforage.min.js
 // ==/UserScript==
 
 // @ts-ignore that's the goal
@@ -109,6 +107,13 @@ try {
   if (window.location.href.includes("WartelisteToPlatzierungPrepare.do")) {
     /** @type {HTMLInputElement | null} */
     const okButton = document.querySelector("#neuvertrag");
+    okButton?.focus();
+  }
+
+  //COPY CONTRACT CONFIRM PAGE
+  if (window.location.href.includes("PlatzierungVertragKopierenPrepare.do")) {
+    /** @type {HTMLInputElement | null} */
+    const okButton = document.querySelector("#kopierenConfirmJaButton");
     okButton?.focus();
   }
 
