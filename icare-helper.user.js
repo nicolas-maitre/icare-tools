@@ -105,6 +105,13 @@ try {
     clientGroupSelect?.focus();
   }
 
+  //TRANSFER CONFIRM CONTRACT PAGE
+  if (window.location.href.includes("WartelisteToPlatzierungPrepare.do")) {
+    /** @type {HTMLInputElement | null} */
+    const okButton = document.querySelector("#neuvertrag");
+    okButton?.focus();
+  }
+
   //COPY CONTRACT PAGE
   if (window.location.href.includes("PlatzierungVertragKopierenPrepare.do?action=prepare&verId=")) {
     /** @type {HTMLInputElement | null} */
