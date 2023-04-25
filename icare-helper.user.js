@@ -133,6 +133,10 @@ try {
     const contracts = [...document.querySelectorAll("a")].filter((e) =>
       e.href.includes("Be/VertragEdit.do?method=main&aktuelle=true&theVerId=")
     );
+
+    //focus first contract
+    contracts.at(0)?.focus();
+
     if (AUTO_CONTRACT && contracts.length === 1) {
       contracts[0].click();
     }
