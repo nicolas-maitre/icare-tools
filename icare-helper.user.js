@@ -222,7 +222,6 @@ try {
     window.location.href.includes("VertragEdit.do") ||
     window.location.href.includes("PlatzierungVertragKopieren.do")
   ) {
-    //should add kopieren
     //skip confirmation
     (() => {
       /** @type {HTMLInputElement | null} */
@@ -253,6 +252,15 @@ try {
       }
     })();
 
+    //focus copy contract button
+    (async () => {
+      const copyButtonElem = await waitForSelector(
+        "#ui-id-6 > [name=VertragEditForm] > table > tbody > tr > td > table > tbody > tr > td > button.btn.btn-primary",
+        250,
+        Infinity
+      );
+      copyButtonElem.focus();
+    })();
     //preview date
     (async () => {
       /** @type {HTMLInputElement} */
