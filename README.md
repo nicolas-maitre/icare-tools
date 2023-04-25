@@ -1,6 +1,6 @@
 # Icare Tools
 
-Automation task scheduler for iCare.  
+Automation task scheduler for cse.kibe iCare.  
 The repo also contains the `icare-helper` userscript used to improve the usage of iCare.
 
 ## Usage
