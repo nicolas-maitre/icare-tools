@@ -29,6 +29,7 @@ const AUTO_TAB = false;
 // const AUTO_TAB = "prestations";
 // const AUTO_TAB = "imprimer";
 
+/** @type {string | undefined} */
 // const AUTO_FOCUS_PERSON_SEARCH = false;
 // const AUTO_FOCUS_PERSON_SEARCH = "id";
 // const AUTO_FOCUS_PERSON_SEARCH = "name";
@@ -65,8 +66,7 @@ try {
     }
 
     if (AUTO_FOCUS_PERSON_SEARCH) {
-      /** @type {HTMLInputElement | null} */
-      const elem = document.querySelector(
+      const query =
         AUTO_FOCUS_PERSON_SEARCH === "id"
           ? "#personentyp[name=perId]"
           : AUTO_FOCUS_PERSON_SEARCH === "birthday"
@@ -75,16 +75,21 @@ try {
           ? "#perEinwohner[name=perEinwohner]"
           : AUTO_FOCUS_PERSON_SEARCH === "name"
           ? "#name[name=name]"
-          : undefined
-      );
-      elem?.focus();
-      elem?.select();
+          : undefined;
+
+      if (query) {
+        /** @type {HTMLInputElement | null} */
+        const elem = document.querySelector(query);
+        elem?.focus();
+        elem?.select?.();
+      }
     }
 
     //click on first person if only one found
     const peopleRows = document.querySelectorAll("#per.dataTable.jqResultList > tbody > tr");
     console.log({ peopleRows });
     if (AUTO_PERSON && peopleRows.length === 1) {
+      /** @type {HTMLAnchorElement | null} */
       const link = peopleRows[0].querySelector("td.link[style='width: 200px;'] a");
       link?.click();
     }
@@ -135,7 +140,7 @@ try {
     );
 
     //focus first contract
-    contracts.at(0)?.focus();
+    [...contracts].at(-1)?.focus();
 
     if (AUTO_CONTRACT && contracts.length === 1) {
       contracts[0].click();
@@ -145,9 +150,10 @@ try {
   //FIND CONTRACTS PAGE
   if (window.location.href.includes("VertragList.do")) {
     //focus input
+    /** @type {HTMLInputElement | null} */
     const input = document.querySelector("[name=verNr]");
-    input.focus();
-    input.select();
+    input?.focus();
+    input?.select();
 
     //highlight + checked
     const trh = document.querySelector(".dataTable#ver > thead > tr");
