@@ -10,6 +10,7 @@ import { removeDACPrestTaskParams } from "../tasks/removeDACPrest";
 import { testTaskParams } from "../tasks/test";
 import { Warning } from "./errors";
 import { IcareWindow } from "./icareTypes";
+import { stepContractsTaskParams } from "../tasks/stepContracts";
 
 export type Task = {
   name: keyof typeof taskMap;
@@ -38,6 +39,7 @@ export const taskMap = {
   addOtherPrest: addOtherPrestTaskParams,
   removeDACPrest: removeDACPrestTaskParams,
   changeMotive: changeMotiveTaskParams,
+  stepContracts: stepContractsTaskParams,
 } satisfies Record<string, TaskParams>;
 
 // CONFIG
