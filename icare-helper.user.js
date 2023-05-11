@@ -312,6 +312,16 @@ try {
     //     }
   }
 
+  //LOGIN PAGE
+  if (
+    window.location.href.includes("HandleError.do") ||
+    window.location.href.includes("Initialize.do")
+  ) {
+    /** @type {HTMLButtonElement | null} */
+    const logInButton = document.querySelector("[name=LoginForm] button[type=submit].btn-lg");
+    logInButton?.focus();
+  }
+
   console.info("Icare helper success");
 } catch (e) {
   console.error("icare helper error", e);
