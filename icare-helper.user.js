@@ -128,8 +128,11 @@ try {
     const startDateInput = document.querySelector("#verBeginn");
     if (startDateInput) {
       startDateInput.value = START_DATE;
-      startDateInput.focus();
+      // startDateInput.focus();
     }
+    /** @type {HTMLSelectElement | null} */
+    const institutionSelect = document.querySelector("[name=newPergId]");
+    institutionSelect?.focus();
   }
 
   //PERSON PAGE
