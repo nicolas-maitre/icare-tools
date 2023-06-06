@@ -128,11 +128,11 @@ try {
     const startDateInput = document.querySelector("#verBeginn");
     if (startDateInput) {
       startDateInput.value = START_DATE;
-      // startDateInput.focus();
+      startDateInput.focus();
     }
-    /** @type {HTMLSelectElement | null} */
-    const institutionSelect = document.querySelector("[name=newPergId]");
-    institutionSelect?.focus();
+    // /** @type {HTMLSelectElement | null} */
+    // const institutionSelect = document.querySelector("[name=newPergId]");
+    // institutionSelect?.focus();
   }
 
   //PERSON PAGE
@@ -148,6 +148,13 @@ try {
     if (AUTO_CONTRACT && contracts.length === 1) {
       contracts[0].click();
     }
+  }
+
+  //POPUP CONFIRM
+  if (window.location.href.includes("PlatzierungLoeschen.do")) {
+    /** @type {HTMLButtonElement | null} */
+    const confirmButton = document.querySelector("button.btn-success");
+    confirmButton?.focus();
   }
 
   //FIND CONTRACTS PAGE
