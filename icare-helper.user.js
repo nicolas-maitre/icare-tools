@@ -150,10 +150,17 @@ try {
     }
   }
 
-  //POPUP CONFIRM
+  //REMOVE PREST POPUP CONFIRM
   if (window.location.href.includes("PlatzierungLoeschen.do")) {
     /** @type {HTMLButtonElement | null} */
     const confirmButton = document.querySelector("button.btn-success");
+    confirmButton?.focus();
+  }
+
+  //SAVE CONTRACT POPUP CONFIRM
+  if (window.location.href.includes("PlatzierungVertragPrepare.do")) {
+    /** @type {HTMLInputElement | null} */
+    const confirmButton = document.querySelector("input.btn.btn-primary");
     confirmButton?.focus();
   }
 
