@@ -1,4 +1,5 @@
 import { showWindow, ToolWindow } from "../components/ToolsWindow";
+import { waitForSelector } from "./async";
 import { setNewTask } from "./task";
 import { BindRef, createElem, e } from "./UITools";
 
@@ -49,9 +50,7 @@ export function buildToolsButtonIntegration() {
 
 export function buildGoToContractButtonIntegration() {
   const h2 = document.querySelector("#data h2");
-  const personIdForButton = Number(
-    h2?.textContent?.split("(").at(1)?.split(")").at(0)
-  );
+  const personIdForButton = Number(h2?.textContent?.split("(").at(1)?.split(")").at(0));
   if (h2 && !isNaN(personIdForButton)) {
     e(h2).addElem(
       "button",
@@ -68,6 +67,33 @@ export function buildGoToContractButtonIntegration() {
         },
       },
       "c"
+    );
+  }
+}
+
+export async function buildRemoveEndDateButtonIntegration() {
+  //the button may disappear on tab switch
+  const endDateInput = await waitForSelector<HTMLInputElement>(
+    "#ui-id-6 > form > table > tbody > tr > td > input#verEnde"
+  );
+  const endDateValue = endDateInput.value;
+  if (endDateValue) {
+    e(endDateInput.parentElement!).addElem(
+      "button",
+      {
+        type: "button",
+        onclick(ev) {
+          setNewTask("removeEndDate", {
+            dateToRemove: endDateValue,
+            newEndDate: "",
+          });
+        },
+        title: `Supprimer la date de fin du contrat et des prestations`,
+        style: {
+          borderRadius: ".5em",
+        },
+      },
+      `supprimer fin au ${endDateValue}`
     );
   }
 }

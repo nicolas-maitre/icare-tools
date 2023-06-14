@@ -11,6 +11,7 @@ import { testTaskParams } from "../tasks/test";
 import { Warning } from "./errors";
 import { IcareWindow } from "./icareTypes";
 import { stepContractsTaskParams } from "../tasks/stepContracts";
+import { removeEndDateTaskParams } from "../tasks/removeEndDate";
 
 export type Task = {
   name: keyof typeof taskMap;
@@ -36,6 +37,7 @@ export const taskMap = {
   fillContractClasses: fillContractClassesTaskParams,
   applyPercentFacturation: applyPercentFacturationTaskParams,
   goToContracts: goToContractsTaskParams,
+  removeEndDate: removeEndDateTaskParams,
   addOtherPrest: addOtherPrestTaskParams,
   removeDACPrest: removeDACPrestTaskParams,
   changeMotive: changeMotiveTaskParams,

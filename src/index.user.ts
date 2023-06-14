@@ -12,7 +12,11 @@
 
 import { buildTaskWindow } from "./components/TaskWindow";
 import { handleTasks } from "./lib/task";
-import { buildGoToContractButtonIntegration, buildToolsButtonIntegration } from "./lib/UIBuilder";
+import {
+  buildGoToContractButtonIntegration,
+  buildRemoveEndDateButtonIntegration,
+  buildToolsButtonIntegration,
+} from "./lib/UIBuilder";
 import { urlCheck } from "./lib/url";
 //use violentmonkey for custom editor
 
@@ -21,6 +25,10 @@ buildToolsButtonIntegration();
 //add contract button to person page
 if (urlCheck(["/icare/Be/PersonEdit.do", "/icare/Be/KindEdit.do"])) {
   buildGoToContractButtonIntegration();
+}
+//add end date removal button on contract page
+if (urlCheck("/icare/Be/VertragEdit.do")) {
+  buildRemoveEndDateButtonIntegration();
 }
 
 buildTaskWindow();

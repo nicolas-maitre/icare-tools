@@ -85,7 +85,7 @@ export function WindowChangeMotiveSection() {
   return createElem(
     "p",
     null,
-    createElem("h3", null, "Remplissage du motif d'accueil"),
+    createElem("h3", null, "Remplissage du motif d'accueil (DAC)"),
     createElem(
       "form",
       {
