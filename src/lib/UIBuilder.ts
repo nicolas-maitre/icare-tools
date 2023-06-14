@@ -78,7 +78,7 @@ export async function buildRemoveEndDateButtonIntegration() {
   );
   const endDateValue = endDateInput.value;
   if (endDateValue) {
-    e(endDateInput.parentElement!).addElem(
+    const btn = e(endDateInput.parentElement!).addElem(
       "button",
       {
         type: "button",
@@ -95,5 +95,7 @@ export async function buildRemoveEndDateButtonIntegration() {
       },
       `supprimer fin au ${endDateValue}`
     );
+    //THE GARBAGE IS REAL
+    setTimeout(() => btn.focus(), 200);
   }
 }
