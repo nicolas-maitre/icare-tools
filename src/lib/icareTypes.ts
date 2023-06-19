@@ -9,3 +9,5 @@ export type IcareWindow = typeof window & {
     setStep: typeof setStep;
   };
 };
+
+export type BasicContract = { "c ID": number };

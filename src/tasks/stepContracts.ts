@@ -4,8 +4,6 @@ import { Warning } from "../lib/errors";
 import { nextTaskStep, removeCurrentTask, Task, TaskParams } from "../lib/task";
 import { urlCheckOrGo } from "../lib/url";
 
-export type BasicContract = { "c ID": number };
-
 export type StepContractsSharedData = {
   contractIds: number[];
   contractsCount: number;

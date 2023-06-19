@@ -1,7 +1,6 @@
 import { WindowAddOtherPrestSection } from "../components/WindowAddOtherPrestSection";
 import { async_setTimeout, waitForSelector } from "../lib/async";
 import { errorIfIcareTools } from "../lib/checks";
-import { IcareWindow } from "../lib/icareTypes";
 import { getCurrentTask, nextTaskStep, removeCurrentTask, Task, TaskParams } from "../lib/task";
 import { createElem } from "../lib/UITools";
 import { urlCheck, urlCheckOrGo } from "../lib/url";

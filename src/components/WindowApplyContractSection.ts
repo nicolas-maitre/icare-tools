@@ -3,12 +3,8 @@ import { setNewTask } from "../lib/task";
 import { BindRef, createElem, promptIndex } from "../lib/UITools";
 import { namedLog, objectContainsKeys } from "../lib/utils";
 import { ApplyContractSharedData } from "../tasks/applyContract";
-import {
-  ChangeMotiveContract,
-  ChangeMotiveSharedData,
-  ChangeMotiveTask,
-} from "../tasks/changeMotive";
 import { hideWindow } from "./ToolsWindow";
+import { BasicContract } from "../lib/icareTypes";
 
 export function WindowApplyContractSection() {
   const submitButtonRef: BindRef<HTMLButtonElement> = {};
@@ -56,7 +52,7 @@ export function WindowApplyContractSection() {
     const contractsSheet =
       contractsWorkbook.Sheets[contractsWorkbook.SheetNames[selectedContractsSheet]];
 
-    const contractsJSON: ChangeMotiveContract[] = XLSXUtils.sheet_to_json(contractsSheet);
+    const contractsJSON: BasicContract[] = XLSXUtils.sheet_to_json(contractsSheet);
     if (!Array.isArray(contractsJSON) || !objectContainsKeys(contractsJSON[0], ["c ID"])) {
       submitButtonRef.current.disabled = false;
       alert("Le fichier de contrats est vide ou corrompu. Veuillez réessayer.");

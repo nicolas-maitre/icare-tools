@@ -1,6 +1,7 @@
 import { WindowApplyContractSection } from "../components/WindowApplyContractSection";
 import { waitForSelector } from "../lib/async";
 import { errorIfIcareTools } from "../lib/checks";
+import { Warning } from "../lib/errors";
 import {
   getCurrentTask,
   nextTaskStep,
@@ -12,7 +13,7 @@ import {
 import { createElem } from "../lib/UITools";
 import { urlCheck, urlCheckOrGo } from "../lib/url";
 
-export type ApplyableContract = { "c ID": number; "c fin"?: string };
+export type ApplyableContract = { "c ID": number; "c fin"?: string; "c irregulier"?: string };
 
 export type ApplyContractSharedData = {
   contractIdsToHandle: number[];
@@ -48,7 +49,7 @@ async function applyContractsTaskFn(task: ApplyContractTask) {
 
     case "taskContractPageStart": {
       const contractToApply = task.sharedData.contracts[currentId];
-      if (contractToApply["c fin"] === undefined) {
+      if (contractToApply["c fin"] === undefined && contractToApply["c irregulier"] === undefined) {
         //next step
         nextTaskStep("endOfLoop", task);
         return;
@@ -85,10 +86,17 @@ async function applyContractsTaskFn(task: ApplyContractTask) {
       let shouldSave = false;
 
       if (currentContract["c fin"] !== undefined) {
-        shouldSave = true;
+        shouldSave = true; //maybe check if changed before?
         //change end date
         const endDateInput = await waitForSelector<HTMLInputElement>("input#verEnde");
         endDateInput.value = currentContract["c fin"];
+      }
+
+      if (currentContract["c irregulier"] !== undefined) {
+        shouldSave = true; //maybe check if changed before?
+        //change end date
+        const irregularInputCB = await waitForSelector<HTMLInputElement>("input#irregular");
+        irregularInputCB.checked = !!currentContract["c irregulier"];
       }
 
       if (shouldSave) {

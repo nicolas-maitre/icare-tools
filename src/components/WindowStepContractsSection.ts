@@ -3,7 +3,8 @@ import { setNewTask } from "../lib/task";
 import { BindRef, createElem, promptIndex } from "../lib/UITools";
 import { namedLog, objectContainsKeys } from "../lib/utils";
 import { hideWindow } from "./ToolsWindow";
-import { BasicContract, StepContractsSharedData } from "../tasks/stepContracts";
+import { StepContractsSharedData } from "../tasks/stepContracts";
+import { BasicContract } from "../lib/icareTypes";
 
 export function WindowStepContractsSection() {
   const submitButtonRef: BindRef<HTMLButtonElement> = {};
