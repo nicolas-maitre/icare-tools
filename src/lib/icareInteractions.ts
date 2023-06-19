@@ -1,4 +1,5 @@
 import { FillContractClassesSharedData } from "../tasks/fillContractClasses";
+import { waitForSelector } from "./async";
 import { Warning } from "./errors";
 import { nextTaskStep, Task } from "./task";
 import { namedLog } from "./utils";
@@ -138,4 +139,45 @@ export async function fillContractData(
   task = await nextTaskStep(nextStep, task, true);
   select.value = optionToSelect.value;
   saveButton.click();
+}
+
+export async function waitForSpinnerHidden() {
+  // wait for spinner end
+  await waitForSelector(
+    () => {
+      const savedBox = document.querySelector<HTMLElement>(".spinner-container");
+      return savedBox?.style.display === "none" ? savedBox : null;
+    },
+    10,
+    500
+  );
+}
+
+export async function waitForSuccess() {
+  // wait for success message
+  await waitForSelector(
+    () => {
+      const savedBox = document.querySelector<HTMLElement>("#saved");
+      return savedBox?.style.visibility === "visible" ? savedBox : null;
+    },
+    10,
+    500
+  );
+}
+export async function waitForSuccessHidden() {
+  // wait for success message
+  await waitForSelector(
+    () => {
+      const savedBox = document.querySelector<HTMLElement>("#saved");
+      return savedBox?.style.visibility !== "visible" ? savedBox : null;
+    },
+    10,
+    500
+  );
+}
+export function closeAjaxErrorDialog() {
+  document
+    .querySelector("#ajaxErrorDialog")
+    ?.parentElement?.querySelector<HTMLButtonElement>(".ui-dialog-buttonpane button")
+    ?.click();
 }

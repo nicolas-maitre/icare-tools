@@ -1,5 +1,10 @@
 import { async_setTimeout, waitForSelector, waitForSelectorAll } from "../lib/async";
 import { Warning } from "../lib/errors";
+import {
+  waitForSpinnerHidden,
+  waitForSuccess,
+  waitForSuccessHidden,
+} from "../lib/icareInteractions";
 import { nextTaskStep, removeCurrentTask, Task, TaskParams } from "../lib/task";
 import { urlCheck } from "../lib/url";
 import { namedLog } from "../lib/utils";
@@ -67,15 +72,7 @@ async function removeEndDateTaskFn(task: RemoveEndDateTask) {
         }
       });
 
-      //wait for success message to be hidden
-      await waitForSelector(
-        () => {
-          const savedBox = document.querySelector<HTMLElement>("#saved");
-          return savedBox?.style.visibility !== "visible" ? savedBox : null;
-        },
-        10,
-        500
-      );
+      await waitForSuccessHidden();
 
       //ASYNC GARBAGE: wait for success on the same page
       task = await nextTaskStep("confirmSave", task, true); //AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
@@ -134,27 +131,3 @@ async function removeEndDateTaskFn(task: RemoveEndDateTask) {
 export const removeEndDateTaskParams: TaskParams = {
   taskFn: removeEndDateTaskFn,
 };
-
-async function waitForSpinnerHidden() {
-  // wait for spinner end
-  await waitForSelector(
-    () => {
-      const savedBox = document.querySelector<HTMLElement>(".spinner-container");
-      return savedBox?.style.display === "none" ? savedBox : null;
-    },
-    10,
-    500
-  );
-}
-
-async function waitForSuccess() {
-  // wait for success message
-  await waitForSelector(
-    () => {
-      const savedBox = document.querySelector<HTMLElement>("#saved");
-      return savedBox?.style.visibility === "visible" ? savedBox : null;
-    },
-    10,
-    500
-  );
-}

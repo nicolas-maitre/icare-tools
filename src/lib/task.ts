@@ -12,6 +12,7 @@ import { Warning } from "./errors";
 import { IcareWindow } from "./icareTypes";
 import { stepContractsTaskParams } from "../tasks/stepContracts";
 import { removeEndDateTaskParams } from "../tasks/removeEndDate";
+import { addDispensesTaskParams } from "../tasks/addDispenses";
 
 export type Task = {
   name: keyof typeof taskMap;
@@ -34,6 +35,7 @@ export type TaskParams = {
 export const taskMap = {
   applyContract: applyContractTaskParams,
   test: testTaskParams,
+  addDispenses: addDispensesTaskParams,
   fillContractClasses: fillContractClassesTaskParams,
   applyPercentFacturation: applyPercentFacturationTaskParams,
   goToContracts: goToContractsTaskParams,
