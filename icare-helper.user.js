@@ -25,15 +25,16 @@ const AUTO_PERSON = true;
 // const AUTO_CONTRACT = true;
 const AUTO_CONTRACT = false;
 
-const AUTO_TAB = false;
+// const AUTO_TAB = false;
 // const AUTO_TAB = "prestations";
+const AUTO_TAB = "otherprests";
 // const AUTO_TAB = "imprimer";
 
 /** @type {string | undefined} */
 // const AUTO_FOCUS_PERSON_SEARCH = false;
-// const AUTO_FOCUS_PERSON_SEARCH = "id";
+const AUTO_FOCUS_PERSON_SEARCH = "id";
 // const AUTO_FOCUS_PERSON_SEARCH = "name";
-const AUTO_FOCUS_PERSON_SEARCH = "birthday";
+// const AUTO_FOCUS_PERSON_SEARCH = "birthday";
 // const AUTO_FOCUS_PERSON_SEARCH = "chnum";
 
 const START_DATE = "21.08.2023";
@@ -261,11 +262,20 @@ try {
 
     if (AUTO_TAB) {
       (async () => {
-        const tab_id = AUTO_TAB === "prestations" ? 7 : AUTO_TAB === "imprimer" ? 11 : undefined;
+        const tab_id =
+          AUTO_TAB === "prestations"
+            ? 7
+            : AUTO_TAB === "otherprests"
+            ? 9
+            : AUTO_TAB === "imprimer"
+            ? 11
+            : undefined;
         if (tab_id === undefined) return;
         /** @type {HTMLAnchorElement} */
         const tabLink = await waitForSelector(`ul > li[role=tab] > a#ui-id-${tab_id}`, 250);
         tabLink?.click();
+
+        waitAndCloseAjaxErrorDialog(); //because it's annoying
       })();
     }
 
@@ -380,4 +390,10 @@ function waitForSelector(selector, checkInterval = 100, maxChecks = 50) {
       resolve(res);
     }
   });
+}
+
+async function waitAndCloseAjaxErrorDialog() {
+  (await waitForSelector("#ajaxErrorDialog")).parentElement
+    ?.querySelector(".ui-dialog-buttonpane button")
+    ?.click();
 }
