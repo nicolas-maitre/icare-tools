@@ -22,6 +22,9 @@ export type AddOtherPrestTask = Omit<Task, "sharedData"> & {
   sharedData: AddOtherPrestSharedData;
 };
 
+export const ADD_OTHER_PREST_START_DATE = "01.04.2023";
+export const ADD_OTHER_PREST_END_DATE = "30.04.2023";
+
 async function addOtherPrestTask(task: AddOtherPrestTask) {
   errorIfIcareTools();
 
@@ -93,13 +96,13 @@ async function addOtherPrestTask(task: AddOtherPrestTask) {
       const startDateInput = await waitForSelector(() =>
         newPrestForm.querySelector<HTMLInputElement>("#al-beginn")
       );
-      startDateInput.value = "01.11.2022";
+      startDateInput.value = ADD_OTHER_PREST_START_DATE;
 
       //set end date
       const endDateInput = await waitForSelector(() =>
         newPrestForm.querySelector<HTMLInputElement>("#al-ende")
       );
-      endDateInput.value = "30.11.2022";
+      endDateInput.value = ADD_OTHER_PREST_END_DATE;
 
       //click on save
       const saveButton = await waitForSelector(() =>

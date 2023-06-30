@@ -2,7 +2,12 @@ import { read as readXLSX, utils as XLSXUtils } from "xlsx";
 import { setNewTask } from "../lib/task";
 import { BindRef, createElem, promptIndex } from "../lib/UITools";
 import { namedLog, objectContainsKeys } from "../lib/utils";
-import { AddOtherPrestContract, AddOtherPrestSharedData } from "../tasks/addOtherPrests";
+import {
+  ADD_OTHER_PREST_END_DATE,
+  ADD_OTHER_PREST_START_DATE,
+  AddOtherPrestContract,
+  AddOtherPrestSharedData,
+} from "../tasks/addOtherPrests";
 import { hideWindow } from "./ToolsWindow";
 
 export function WindowAddOtherPrestSection() {
@@ -77,7 +82,7 @@ export function WindowAddOtherPrestSection() {
       doneContracts: [],
     };
 
-    setNewTask("addOtherPrest", taskData, undefined, "Remplissage des contrats sans classe.");
+    setNewTask("addOtherPrest", taskData, undefined, "Ajout d'aide individuelle");
 
     hideWindow();
     submitButtonRef.current.disabled = false;
@@ -86,7 +91,11 @@ export function WindowAddOtherPrestSection() {
   return createElem(
     "p",
     null,
-    createElem("h3", null, "Ajout automatique des 'autres prestations' 'Aide individuelle'"),
+    createElem(
+      "h3",
+      null,
+      `Ajout automatique des 'autres prestations' 'Aide individuelle B' (date hardcodée ${ADD_OTHER_PREST_START_DATE} - ${ADD_OTHER_PREST_END_DATE})`
+    ),
     createElem(
       "form",
       {

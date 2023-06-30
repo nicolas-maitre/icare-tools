@@ -14,7 +14,7 @@ export type StepContactsTask = Omit<Task, "sharedData"> & {
 };
 
 export async function stepContractsTaskFn(task: StepContactsTask) {
-  errorIfIcareTools();
+  // errorIfIcareTools();
   const currentId = task.sharedData.contractIds[0];
   switch (task.stepName) {
     case "start": {
